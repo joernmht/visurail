@@ -8,6 +8,20 @@ the full interactive model ("Go deeper"). The same page is the presentation: **P
 `F`) goes fullscreen, `←` `→` / PageUp PageDown / Space step through, so a presentation clicker
 works. `?present` in the URL opens straight into presenting, `#step-3` deep-links a step.
 
+**Films.** Every essay is also a short film (MP4, 16:9 and 9:16 for phones) that the page shows
+first; "Step through & present" switches to the interactive version. The films are rendered
+frame-exactly from the essay itself (`?film` mode, `window.__film.seek(t)`):
+
+```bash
+python3 -m http.server 8765 &
+node scripts/record_films.js            # all essays, or name slugs; needs Playwright + ffmpeg (libx264)
+```
+
+Re-record after changing an essay; outputs are `viz/<slug>/film-{16x9,9x16}.{mp4,jpg}`.
+
+**Dark by default.** The site opens on the TUD dark-blue field; the light theme stays available
+via the Light/Dark switch in the header (remembered per browser).
+
 **Mobile first.** On a phone held upright every essay draws a portrait layout (900 × 1120 stage;
 the line runs top to bottom, bars become rows), you swipe or tap to step, and the explorers scale
 their labels up. Desktop, tablets, landscape phones and projectors get the 16:9 layout.

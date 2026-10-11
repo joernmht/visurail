@@ -355,3 +355,51 @@ details summary{cursor:pointer;color:var(--accent);margin:10px 0}
 .essay.presenting.portrait .cap{position:static;max-width:none;background:none;border-left:0;padding:14px 20px}
 .essay.presenting.portrait .stage-wrap{height:100vh;justify-content:center}
 .essay.presenting.portrait .stage{width:100vw;max-height:72vh}
+
+/* ---- film mode (recording) ---------------------------------------------- */
+html.filming body > *:not(main){display:none}
+html.filming main > *:not(#essay){display:none}
+html.filming, html.filming body{background:#00103a;overflow:hidden}
+.essay.film .ebar{display:none}
+.essay.film .stage{cursor:default}
+.film-card{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:0 8%;gap:18px;
+  background:radial-gradient(120% 90% at 70% 20%,#00206b 0%,#001450 45%,#00103a 100%);opacity:0;transition:opacity .5s;pointer-events:none;z-index:3}
+.film-card.on{opacity:1}
+.film-card .fk{color:#36b8bf;letter-spacing:.18em;text-transform:uppercase;font-size:clamp(14px,1.6vw,22px);font-weight:500}
+.film-card .ft{color:#fff;font-size:clamp(34px,5vw,76px);font-weight:500;line-height:1.08;letter-spacing:-.02em}
+.film-card .ft.sm{font-size:clamp(22px,2.6vw,40px)}
+.film-card .fs{color:#a6b8da;font-size:clamp(15px,1.5vw,24px);max-width:60ch}
+.film-card .fu{color:#f0922e;font-size:clamp(18px,1.8vw,28px);font-weight:500;margin-top:10px}
+
+/* ---- film player + mode switch on essay pages ------------------------------ */
+.modes{display:flex;gap:8px;margin:16px 0 10px;flex-wrap:wrap}
+.modes button{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);color:var(--muted);
+  font:inherit;font-size:14.5px;padding:9px 14px;cursor:pointer;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.modes button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.filmbox video{display:block;width:100%;aspect-ratio:16/9;background:#00103a;border-radius:18px;box-shadow:0 10px 40px rgba(0,20,80,.25)}
+.filmbox[data-fmt="9x16"] video{aspect-ratio:9/16;max-height:82vh;margin:0 auto;width:auto;max-width:100%}
+@media (max-width:700px){.filmbox{margin:0 -16px}.filmbox video{border-radius:0}.modes button{flex:1;justify-content:center;padding:11px 8px}}
+[hidden]{display:none !important}
+/* film typography: sized for the video frame (1600×900 or 720×1280), read on a phone */
+.essay.film .cap{max-width:52vw;padding:22px 28px}
+.essay.film .kick{font-size:20px}
+.essay.film .ct{font-size:46px}
+.essay.film .cx{font-size:27px;line-height:1.4}
+.essay.film.portrait .cap{max-width:none;padding:26px 40px}
+.essay.film.portrait .kick{font-size:24px}
+.essay.film.portrait .ct{font-size:52px;line-height:1.1}
+.essay.film.portrait .cx{font-size:32px}
+.essay.film.portrait .stage{max-height:62vh}
+.essay.film.portrait .film-card{padding:0 9%}
+.essay.film.portrait .film-card .fk{font-size:26px}
+.essay.film.portrait .film-card .ft{font-size:68px}
+.essay.film.portrait .film-card .ft.sm{font-size:44px}
+.essay.film.portrait .film-card .fs{font-size:30px}
+.essay.film.portrait .film-card .fu{font-size:36px}
+.essay.film .film-card .fk{font-size:24px}
+.essay.film .film-card .fs{font-size:26px}
+.essay.film .film-card .fu{font-size:32px}
+.essay.film.portrait .lbl{font-size:38px}
+.essay.film.portrait .lbl.big{font-size:44px}
+.essay.film.portrait .stage{max-height:66vh}

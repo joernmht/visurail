@@ -33,3 +33,46 @@
     "Read the paper for the real method and results." +
     (e.verify && e.verify.length ? ` Prototype: metadata still to verify (${esc(e.verify.join("; "))}).` : "") + "</p>";
 })();
+
+/* Film first: each essay page opens on its recorded film (scripts/record_films.js); "Step through"
+   switches to the interactive essay, which is also the presentation. Portrait phones get the
+   9:16 film, everything else 16:9. */
+(function () {
+  const essay = document.getElementById("essay");
+  if (!essay || /[?&]film/.test(location.search)) return;
+  const { icon } = window.VR;
+  const mq = window.matchMedia("(max-width: 700px) and (orientation: portrait)");
+  const modes = document.createElement("div");
+  modes.className = "modes";
+  modes.setAttribute("role", "tablist");
+  modes.innerHTML =
+    `<button type="button" role="tab" data-mode="film">${icon("play")} Watch the film</button>` +
+    `<button type="button" role="tab" data-mode="steps">${icon("layers")} Step through &amp; present</button>`;
+  const box = document.createElement("div");
+  box.className = "filmbox";
+  const v = document.createElement("video");
+  v.controls = true; v.playsInline = true; v.preload = "metadata"; v.muted = true;
+  v.setAttribute("aria-label", "Film of this visual essay");
+  box.appendChild(v);
+  essay.before(modes, box);
+
+  let fmt = "";
+  function pick() {
+    const f = mq.matches ? "9x16" : "16x9";
+    if (f === fmt || (!v.paused && fmt)) return;
+    fmt = f; box.dataset.fmt = f;
+    v.poster = `film-${f}.jpg`;
+    v.innerHTML = `<source src="film-${f}.webm" type="video/webm"><source src="film-${f}.mp4" type="video/mp4">`;
+    v.querySelector("source:last-child").addEventListener("error", () => { modes.hidden = true; mode("steps"); });
+    v.load();
+  }
+  function mode(m) {
+    modes.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", b.dataset.mode === m ? "true" : "false"));
+    box.hidden = m !== "film"; essay.hidden = m === "film";
+    if (m !== "film") v.pause();
+  }
+  modes.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) mode(b.dataset.mode); });
+  mq.addEventListener("change", pick);
+  pick();
+  mode(/#step-|[?&]present/.test(location.href) ? "steps" : "film");
+})();

@@ -68,6 +68,8 @@
   T.domains.forEach((d) => document.getElementById("domainTiles").appendChild(tile("domain", d, countDomain(d.id))));
   T.interfaces.forEach((d) => document.getElementById("ifaceTiles").appendChild(tile("iface", d, countIface(d.id))));
 
+  const cta = document.getElementById("ctaWatch");
+  if (cta && E[0]) cta.href = `${root}viz/${E[0].slug}/`;
   const feat = document.getElementById("featured");
   if (feat && E[0]) feat.appendChild(card(E[0], true));
 

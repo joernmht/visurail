@@ -40,19 +40,19 @@
     "</div>";
   document.body.append(footer);
 
-  // theme toggle: auto → dark → light → auto (stored per viewer, best-effort)
+  // theme: dark by default (the TUD Dunkelblau field); light is kept as the alternative
   const KEY = "visurail:theme";
-  const apply = (t) => {
-    if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
-    else delete document.documentElement.dataset.theme;
-  };
-  let cur = null;
-  try { cur = localStorage.getItem(KEY); } catch (e) {}
+  const apply = (t) => { document.documentElement.dataset.theme = t === "light" ? "light" : "dark"; };
+  let cur = "dark";
+  try { cur = localStorage.getItem(KEY) === "light" ? "light" : "dark"; } catch (e) {}
   apply(cur);
-  document.getElementById("themebtn").addEventListener("click", () => {
-    cur = cur === "dark" ? "light" : cur === "light" ? null : "dark";
-    apply(cur);
-    try { cur ? localStorage.setItem(KEY, cur) : localStorage.removeItem(KEY); } catch (e) {}
+  const tb = document.getElementById("themebtn");
+  const label = () => { tb.textContent = cur === "dark" ? "Light" : "Dark"; tb.setAttribute("aria-label", `Switch to ${cur === "dark" ? "light" : "dark"} theme`); };
+  label();
+  tb.addEventListener("click", () => {
+    cur = cur === "dark" ? "light" : "dark";
+    apply(cur); label();
+    try { cur === "light" ? localStorage.setItem(KEY, "light") : localStorage.removeItem(KEY); } catch (e) {}
     document.dispatchEvent(new CustomEvent("visurail:theme"));
   });
 })();
