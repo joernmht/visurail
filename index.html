@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#001450">
+<meta name="description" content="visurail — rail science as short visual essays you can watch, step through and present.">
+<title>visurail — Rail Science, Visualized</title>
+<link rel="icon" href="assets/brand/Bildmarke.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/visurail.css">
+</head>
+<body data-root="./" data-page="catalog">
+
+<section class="hero dark">
+  <svg class="hero-tracks" viewBox="0 0 1600 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <path id="t1" d="M-100 120 H700 L780 200 H1700" class="ht"/>
+    <path id="t2" d="M-100 200 H560 L640 120 H1700" class="ht"/>
+    <path d="M-100 240 H1700" class="ht"/>
+    <g class="htrain"><path d="M-40 -9 H31 L40 0 L31 9 H-40 Z"/><animateMotion dur="11s" repeatCount="indefinite" rotate="auto"><mpath href="#t1"/></animateMotion></g>
+    <g class="htrain o"><path d="M-30 -9 H21 L30 0 L21 9 H-30 Z"/><animateMotion dur="7s" begin="-3s" repeatCount="indefinite" rotate="auto"><mpath href="#t2"/></animateMotion></g>
+    <g class="htrain"><path d="M-40 -9 H31 L40 0 L31 9 H-40 Z"/><animateMotion dur="15s" begin="-6s" repeatCount="indefinite" path="M1700 240 H-100" rotate="auto"/></g>
+  </svg>
+  <div class="wrap">
+    <div class="eyebrow">Visual essays on rail science · TU Dresden</div>
+    <h1>Rail science,<br><span>one picture at a time.</span></h1>
+    <p>Open-access rail research turned into short visual essays. Watch them, step through them, present them.</p>
+    <div class="cta">
+      <a class="btn big" id="ctaWatch" href="#essays"><i data-icon="play"></i> Watch the first film</a>
+      <a class="btn big ghost" href="#structure"><i data-icon="planning"></i> Browse by domain</a>
+    </div>
+    <div class="stats">
+      <div><b id="nEntries">–</b>visual essays</div>
+      <div><b id="nDomains">–</b>rail domains</div>
+      <div><b id="nIfaces">–</b>interfaces</div>
+    </div>
+  </div>
+</section>
+
+<main class="wrap">
+  <section class="sec" id="essays">
+    <div class="kicker-s">Start here</div>
+    <h2>Featured essay</h2>
+    <div id="featured" class="featured"></div>
+
+    <h2 style="margin-top:34px" id="moreTitle">More essays</h2>
+    <p class="active-filter" id="activeFilter" aria-live="polite"></p>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="sec" id="structure">
+    <div class="kicker-s">The collection</div>
+    <h2>Seven rail domains</h2>
+    <p class="lead">Rail science divides cleanly by where in the railway system a question sits.</p>
+    <div class="tiles" id="domainTiles"></div>
+    <h2 style="margin-top:30px">Five interfaces</h2>
+    <p class="lead">Where rail meets other systems. An essay can sit on a domain and an interface at once.</p>
+    <div class="tiles" id="ifaceTiles"></div>
+  </section>
+
+  <p class="note" style="margin-top:34px">The format follows <a href="https://visualtransportationscience.org/">Visual Transportation Science</a>,
+    an open atlas of visual essays on transportation research. visurail applies it to rail.
+    <a href="about.html#credit">More on the credit</a>.</p>
+</main>
+
+<script src="assets/js/cro-icons.js"></script>
+<script src="assets/js/site.js"></script>
+<script src="assets/js/taxonomy.js"></script>
+<script src="assets/js/entries.js"></script>
+<script src="assets/js/catalog.js"></script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#00103a">
+<title>One timetable, three networks — visurail</title>
+<link rel="icon" href="../../assets/brand/Bildmarke.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../assets/css/visurail.css">
+<style>
+  .edge{stroke:var(--muted);stroke-linecap:round;opacity:.55}
+  .edge.hi{stroke:var(--orange);opacity:.95}
+  .edge.dim{opacity:.12}
+  .node circle{stroke:var(--bg);stroke-width:2;cursor:pointer}
+  .node.dim{opacity:.3}
+  .node text{fill:var(--ink);font-size:12px;pointer-events:none}
+  .node.pass circle{stroke:var(--muted);stroke-dasharray:2 2}
+  .seg-toggle{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg-toggle button{border:0;background:var(--card);color:var(--muted);padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+  .seg-toggle button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+  table.tt{border-collapse:collapse;font-size:13px;width:100%}
+  table.tt td,table.tt th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}
+  table.tt th{color:var(--muted);font-weight:500}
+  .scroll{overflow-x:auto}
+</style>
+</head>
+<body data-root="../../" data-slug="timetable-network-spaces">
+<main class="wrap">
+  <div id="vhead"></div>
+  <div id="essay"></div>
+
+  <section class="prose">
+    <div class="kicker-s">Field guide</div>
+    <h2>One timetable, three networks</h2>
+    <p>To analyse a timetable as a network, you first have to decide what counts as an edge. Lamanna, Prisma and Medeossi
+      give three answers. In the <b>stations</b> view, an edge joins neighbouring stations on a train's path, including stations it runs through.
+      In the <b>stops</b> view, it joins consecutive stops only. In the <b>changes</b> view, it joins every pair of stations you can travel between
+      without changing trains.</p>
+    <p>Each view answers a different question. The stations view shows where trains run, the stops view where they serve, and the changes view
+      where you can get to directly. Cluster each one (the paper uses <a href="https://www.mapequation.org/infomap/">Infomap</a>) and you see
+      which stations the timetable binds together. The paper uses this, with a Timetable Connectivity Index, to compare Norway's 2024 timetable with a planned 2033 one.</p>
+  </section>
+
+  <section class="deeper">
+    <h2><i data-icon="layers"></i> Go deeper: explore the model</h2>
+    <p class="note">Switch the view and the weighting, and click a station to see its neighbours.</p>
+  <div class="panel">
+    <div class="controls">
+      <div class="seg-toggle" role="group" aria-label="Network space">
+        <button type="button" data-space="stations" aria-pressed="true">Stations</button>
+        <button type="button" data-space="stops" aria-pressed="false">Stops</button>
+        <button type="button" data-space="changes" aria-pressed="false">Changes</button>
+      </div>
+      <div class="seg-toggle" role="group" aria-label="Edge weight">
+        <button type="button" data-w="freq" aria-pressed="true">Weight: trains</button>
+        <button type="button" data-w="time" aria-pressed="false">Weight: 1 / travel time</button>
+      </div>
+    </div>
+    <div class="viz" id="viz"></div>
+    <div class="readout" id="readout"></div>
+    <div class="kv" id="kv"></div>
+  </div>
+
+    <details><summary>The toy timetable</summary><div class="scroll"><table class="tt" id="tt"></table></div></details>
+    <p class="note"><b>Simplifications:</b> a made-up 12-station toy timetable, not the Norwegian data. Edges are undirected, and clusters come
+      from a small modularity heuristic (greedy local moves) rather than Infomap. No code from the authors' GPL-3.0 repository is used.</p>
+  </section>
+
+  <section class="refs prose" id="vcite"></section>
+</main>
+
+<script src="../../assets/js/cro-icons.js"></script>
+<script src="../../assets/js/site.js"></script>
+<script src="../../assets/js/taxonomy.js"></script>
+<script src="../../assets/js/entries.js"></script>
+<script src="../../assets/js/vizpage.js"></script>
+<script src="../../assets/js/essay.js"></script>
+<script src="model.js"></script>
+<script>
+(function () {
+  const { svg, css, esc } = window.VR;
+
+  const { ST, TRAINS, build, communities } = window.TTNET;
+
+  const state = { space: "stations", w: "freq", sel: null };
+  const W = 1000, H = 640, sx = (x) => 40 + x * 9.2, sy = (y) => 40 + y * 9.3;
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Timetable network" }, document.getElementById("viz"));
+
+  function draw() {
+    const pal = [css("--accent"), css("--orange"), css("--logo"), css("--red"), css("--yellow"), css("--muted")];
+    const nodes = Object.keys(ST);
+    const edges = build(state.space);
+    const cl = communities(nodes, edges, state.w);
+    const wv = (e) => (state.w === "freq" ? e.f : 1 / e.t);
+    const wmax = Math.max(...edges.map(wv));
+    root.innerHTML = "";
+    const gE = svg("g", {}, root), gN = svg("g", {}, root);
+    const nb = new Set(state.sel ? [state.sel] : []);
+    edges.forEach((e) => { if (e.a === state.sel) nb.add(e.b); if (e.b === state.sel) nb.add(e.a); });
+    edges.sort((a, b) => wv(a) - wv(b)).forEach((e) => {
+      const A = ST[e.a], B = ST[e.b];
+      const curved = state.space !== "stations";
+      const mx = (sx(A.x) + sx(B.x)) / 2, my = (sy(A.y) + sy(B.y)) / 2;
+      const dx = sx(B.x) - sx(A.x), dy = sy(B.y) - sy(A.y), len = Math.hypot(dx, dy) || 1;
+      const bend = curved ? Math.min(90, len * 0.18) : 0;
+      const d = `M${sx(A.x)},${sy(A.y)} Q${mx - (dy / len) * bend},${my + (dx / len) * bend} ${sx(B.x)},${sy(B.y)}`;
+      const on = state.sel && (e.a === state.sel || e.b === state.sel);
+      const p = svg("path", { d, fill: "none", class: "edge" + (on ? " hi" : state.sel ? " dim" : ""), "stroke-width": (1.2 + 9 * wv(e) / wmax).toFixed(2) }, gE);
+      const t = svg("title", {}, p);
+      t.textContent = `${ST[e.a].n} – ${ST[e.b].n}: ${e.f} trains/day, ${e.t.toFixed(1)} min`;
+    });
+    const deg = {}; edges.forEach((e) => { deg[e.a] = (deg[e.a] || 0) + 1; deg[e.b] = (deg[e.b] || 0) + 1; });
+    const usedAsStop = new Set(TRAINS.flatMap((t) => t.path.split("").filter((s) => !t.pass.includes(s))));
+    nodes.forEach((n) => {
+      const g = svg("g", { class: "node" + (state.sel && !nb.has(n) ? " dim" : ""), tabindex: 0, role: "button", "aria-label": ST[n].n }, gN);
+      svg("circle", { cx: sx(ST[n].x), cy: sy(ST[n].y), r: 9 + 1.6 * Math.sqrt(deg[n] || 0) * 2, fill: pal[cl.c[n] % pal.length] }, g);
+      const lbl = svg("text", { x: sx(ST[n].x), y: sy(ST[n].y) - 22, "text-anchor": "middle" }, g);
+      lbl.textContent = ST[n].n;
+      const pick = () => { state.sel = state.sel === n ? null : n; draw(); };
+      g.addEventListener("click", pick);
+      g.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(); } });
+      if (!usedAsStop.has(n)) g.classList.add("pass");
+    });
+
+    const label = { stations: "Stations", stops: "Stops", changes: "Changes" }[state.space];
+    let txt = `<b>${label} space</b> · ${edges.length} edges · ${cl.n} clusters · modularity Q = ${cl.Q.toFixed(2)}. `;
+    if (state.sel) {
+      const mine = edges.filter((e) => e.a === state.sel || e.b === state.sel);
+      txt += `<b>${esc(ST[state.sel].n)}</b> reaches ${mine.length} stations directly in this space, ` +
+        `${mine.reduce((s, e) => s + e.f, 0)} train-edges/day. Click again to clear.`;
+    } else txt += "Click a station to see its neighbours in this space.";
+    document.getElementById("readout").innerHTML = txt;
+    const dens = (2 * edges.length) / (nodes.length * (nodes.length - 1));
+    document.getElementById("kv").innerHTML =
+      `<div><b>${edges.length}</b><span>edges</span></div>` +
+      `<div><b>${(dens * 100).toFixed(0)} %</b><span>density</span></div>` +
+      `<div><b>${cl.n}</b><span>clusters</span></div>` +
+      `<div><b>${(edges.reduce((s, e) => s + e.t, 0) / edges.length).toFixed(1)} min</b><span>mean edge travel time</span></div>`;
+  }
+
+  document.querySelectorAll("[data-space]").forEach((b) => b.addEventListener("click", () => {
+    state.space = b.dataset.space;
+    document.querySelectorAll("[data-space]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    draw();
+  }));
+  document.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", () => {
+    state.w = b.dataset.w;
+    document.querySelectorAll("[data-w]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    draw();
+  }));
+  document.addEventListener("visurail:theme", draw);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+
+  // timetable table
+  document.getElementById("tt").innerHTML = "<tr><th>Train</th><th>Trains/day</th><th>Route (stops in bold, run-through in grey)</th></tr>" +
+    TRAINS.map((t) => `<tr><td>${t.id}</td><td>${t.f}</td><td>` + t.path.split("").map((s) =>
+      t.pass.includes(s) ? `<span style="color:var(--muted)">${ST[s].n}</span>` : `<b>${ST[s].n}</b>`).join(" → ") + "</td></tr>").join("");
+  draw();
+})();
+</script>
+<script>
+/* ---- the visual essay: simplest picture first, one idea per step ---- */
+(function () {
+  const { svg, mover, text } = window.VR;
+  const { ST, TRAINS, build, communities } = window.TTNET;
+  let P = false; // portrait (phone) layout: the main line runs top to bottom
+  const X = (k) => (P ? 470 + (ST[k].y - 40) * 9 : 150 + ST[k].x * 13.2);
+  const Y = (k) => (P ? 70 + ST[k].x * 10.2 : 150 + ST[k].y * 10.6);
+  const BR = (k) => k === "H" || k === "I" || k === "J";
+  const MAIN = "ABCDEFG", NORTH = "DHIJ", SOUTH = "GKL";
+  const pathOf = (seq) => seq.split("").map((k, i) => `${i ? "L" : "M"}${X(k)} ${Y(k)}`).join(" ");
+  const CL = ["var(--st-acc)", "var(--st-org)", "var(--st-blue)", "var(--st-yel)"];
+
+  function tracks(g, seqs, cls = "trk") { seqs.forEach((q) => svg("path", { d: pathOf(q), class: cls }, g)); }
+  function stations(g, keys, { fill, size, labels = true } = {}) {
+    keys.forEach((k) => {
+      const s = size ? size(k) : 11;
+      svg("rect", { x: X(k) - s, y: Y(k) - s, width: 2 * s, height: 2 * s, class: "stn", style: fill ? `fill:${fill(k)};stroke:${fill(k)}` : "",
+        transform: `rotate(45 ${X(k)} ${Y(k)})` }, g);
+      if (labels) {
+        const side = P || BR(k);
+        text(g, X(k) + (side ? 28 : 0), Y(k) + (side ? 10 : 52), ST[k].n, { class: "lbl", "text-anchor": side ? "start" : "middle" });
+      }
+    });
+  }
+  function shuttle(g, seq, opt) {
+    const fwd = pathOf(seq), back = pathOf(seq.split("").reverse().join(""));
+    return mover(g, fwd + " " + back.replace(/^M/, "L"), { ...opt, rotateAuto: true });
+  }
+  function arcs(g, edges, colour, wmax, cls) {
+    edges.forEach((e) => {
+      const x1 = X(e.a), y1 = Y(e.a), x2 = X(e.b), y2 = Y(e.b);
+      const len = Math.hypot(x2 - x1, y2 - y1), bend = Math.min(260, len * 0.32);
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, nx = -(y2 - y1) / len, ny = (x2 - x1) / len;
+      // bow away from the labels: upwards on landscape, to the left on portrait
+      const s = (P ? nx : ny) > 0 ? -1 : 1;
+      svg("path", { d: `M${x1} ${y1} Q${mx + s * nx * bend} ${my + s * ny * bend} ${x2} ${y2}`, class: "edge " + (cls ? cls(e) : ""),
+        "stroke-width": (2 + 12 * e.f / wmax).toFixed(1), style: colour ? `stroke:${colour(e)}` : "" }, g);
+    });
+  }
+  const adjacent = (e) => TRAINS.some((t) => t.path.includes(e.a + e.b) || t.path.includes(e.b + e.a));
+
+  const steps = [
+    { title: "A railway line", text: "Seven stations on one line. Regional trains run back and forth and stop everywhere.",
+      draw(st, api) {
+        const g = api.layer("base");
+        tracks(g, [MAIN]);
+        stations(g, MAIN.split(""));
+        shuttle(g, MAIN, { dur: 16 });
+        shuttle(g, MAIN, { dur: 16, begin: -8 });
+      } },
+    { title: "Not every train is the same", text: "Branches add more lines. The <b>express</b> (orange) runs through most stations without stopping.",
+      draw(st, api) {
+        const g = api.layer("base");
+        tracks(g, [MAIN]);
+        const nb = svg("g", { class: api.enter(1) }, g); tracks(nb, [NORTH, SOUTH]);
+        stations(g, Object.keys(ST));
+        shuttle(g, MAIN, { dur: 16 });
+        shuttle(g, NORTH, { dur: 10, begin: -3 });
+        shuttle(g, SOUTH, { dur: 7 });
+        shuttle(g, MAIN, { dur: 8, color: "var(--st-org)", w: 60 });
+      } },
+    { title: "Keep only the stops", text: "Draw an edge only between consecutive <b>stops</b>. The express now links Westport straight to Dalby, and the network changes shape.",
+      draw(st, api) {
+        const g = api.layer("base");
+        tracks(g, [MAIN, NORTH, SOUTH], "trk");
+        g.setAttribute("opacity", ".35");
+        const e = build("stops"), wmax = Math.max(...e.map((x) => x.f));
+        const a = svg("g", { class: api.enter(2) }, st);
+        arcs(a, e, (x) => (adjacent(x) ? "var(--st-acc)" : "var(--st-org)"), wmax);
+        stations(svg("g", {}, st), Object.keys(ST));
+      } },
+    { title: "Everywhere without changing", text: "Now connect every pair of stations you can travel between <b>without changing trains</b>. Dalby and Gatehaven turn into hubs.",
+      draw(st, api) {
+        const e = build("changes"), wmax = Math.max(...e.map((x) => x.f));
+        const deg = {}; e.forEach((x) => { deg[x.a] = (deg[x.a] || 0) + 1; deg[x.b] = (deg[x.b] || 0) + 1; });
+        const a = svg("g", { class: api.enter(3), opacity: 0.8 }, st);
+        arcs(a, e, () => "var(--st-acc)", wmax * 1.6);
+        stations(svg("g", {}, st), Object.keys(ST), { size: (k) => 7 + deg[k] * 1.6 });
+      } },
+    { title: "The timetable's regions", text: "Cluster the stops network and four regions appear: groups of stations the timetable binds together. Lamanna et al. (2025) do this for Norway's 2024 and 2033 timetables.",
+      draw(st, api) {
+        const e = build("stops"), wmax = Math.max(...e.map((x) => x.f));
+        const cl = communities(Object.keys(ST), e, "freq");
+        arcs(svg("g", { opacity: 0.55 }, st), e, (x) => (cl.c[x.a] === cl.c[x.b] ? CL[cl.c[x.a] % 4] : "var(--st-line)"), wmax);
+        stations(svg("g", { class: api.enter(4) }, st), Object.keys(ST), { fill: (k) => CL[cl.c[k] % 4], size: () => 14 });
+      } },
+    { title: "Same timetable, three networks", text: "Stations, stops, changes: each view answers a different question. Scroll down to explore them yourself.",
+      draw(st, api) {
+        const views = [["stations", "Stations"], ["stops", "Stops"], ["changes", "Changes"]];
+        views.forEach(([sp, name], i) => {
+          const ox = P ? 10 + i * 295 : 40 + i * 510, oy = P ? 260 : 230, sc = P ? 0.31 : 0.33;
+          const outer = svg("g", { transform: `translate(${ox} ${oy}) scale(${sc})` }, st);
+          const g = svg("g", { class: api.enter(5), style: `animation-delay:${i * 0.15}s` }, outer);
+          const e = build(sp), wmax = Math.max(...e.map((x) => x.f));
+          if (sp === "stations") tracks(g, [MAIN, NORTH, SOUTH], "trk on");
+          else arcs(g, e, (x) => (sp === "stops" && !adjacent(x) ? "var(--st-org)" : "var(--st-acc)"), wmax);
+          stations(g, Object.keys(ST), { labels: false, size: () => 16 });
+          const cx = P ? ox + 140 : ox + 250, ty = P ? 700 : 470;
+          text(st, cx, ty, name, { class: "lbl big", "text-anchor": "middle" });
+          text(st, cx, ty + 44, e.length + " edges", { class: "lbl", "text-anchor": "middle" });
+        });
+      } },
+  ];
+  steps.forEach((s) => { const d = s.draw; s.draw = (st, api) => { P = api.portrait; d(st, api); }; });
+  VR.essay({ mount: document.getElementById("essay"), steps });
+})();
+</script>
+</body>
+</html>

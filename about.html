@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#00103a">
+<title>About visurail</title>
+<link rel="icon" href="assets/brand/Bildmarke.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/visurail.css">
+</head>
+<body data-root="./" data-page="about">
+<main class="wrap prose">
+  <div class="crumbs"><a href="index.html">Catalog</a> › About</div>
+  <div class="chairlogo" style="margin:14px 0 6px" id="logo"></div>
+  <h1>About visurail</h1>
+  <p>visurail collects <b>interactive visualizations of rail science</b>. Each one takes a single idea from an open-access
+    paper and turns it into something you can try in the browser: a slider, a diagram, a small model. The paper stays the
+    authority. The visualization is the way in.</p>
+
+  <h2 id="credit">Credit: Visual Transportation Science</h2>
+  <p>The format is not ours. <a href="https://visualtransportationscience.org/">Visual Transportation Science</a>
+    is an open atlas of transportation ideas: classic and contemporary research turned into short visual essays,
+    each a film followed by a field guide and its research references, grouped into subject areas such as traffic flow,
+    intersections, networks and public transit. visurail applies that idea to one
+    field, rail, so that the catalog can be structured more tightly. No code or content from Visual Transportation Science is
+    used here. If you like this site, go and look at theirs.</p>
+
+  <h2>How the catalog is structured</h2>
+  <p>Within rail, the field divides cleanly, so the catalog uses two axes instead of one long topic list:</p>
+  <ul>
+    <li><b>Rail domains</b>: where in the railway system the work sits. These are Operations, Infrastructure &amp; Construction,
+      Signalling &amp; Control, Vehicles &amp; Dynamics, Network Planning &amp; Economics, Energy &amp; Environment, and Safety &amp; Reliability.
+      Each work has one primary domain and may have secondary ones.</li>
+    <li><b>Interfaces</b>: where rail meets another system. These are Rail × Air, Rail × Road, Rail × Water, Rail × Urban mobility, and Rail × Weather &amp; Climate.
+      A work can sit on several.</li>
+  </ul>
+  <p>Facets for segment (passenger, freight, …) and method (optimisation, simulation, network science, …) cut across both axes.
+    The taxonomy is a proposal, and we expect it to change once more works come in.</p>
+
+  <h2 id="licences">Licences</h2>
+  <ul>
+    <li><b>Site code</b>: Apache License 2.0 (see <code>LICENSE</code> and <code>NOTICE</code> in the repository).</li>
+    <li><b>Visualized works</b>: we only take papers published under <b>CC BY</b>. Every page cites its source, names
+      the licence and links to the paper. The visualizations are independent, simplified re-implementations and are not
+      endorsed by the original authors. We link to the authors' code, and we copy it only when its licence is compatible
+      with Apache-2.0.</li>
+    <li><b>Logos and icons</b> of TU Dresden and the Chair of Railway Operations are trademarks and are not covered by
+      Apache-2.0.</li>
+    <li><b>Font</b>: Noto Sans, SIL Open Font License 1.1, self-hosted. No third-party font CDN is used.</li>
+  </ul>
+
+  <h2>Who</h2>
+  <p>A prototype by the Chair of Railway Operations (Professur für Bahnverkehr, öffentlicher Stadt- und Regionalverkehr),
+    TU Dresden. Development is open on <a href="https://github.com/joernmht/visurail">GitHub</a>.</p>
+
+  <h2>AI disclaimer</h2>
+  <p>This prototype was developed with substantial assistance from AI coding tools (Anthropic's Claude). The content is reviewed
+    by the maintainers, who take responsibility for it. Corrections are welcome via GitHub issues.</p>
+</main>
+<script src="assets/js/site.js"></script>
+<script>
+  // inline the chair wordmark so its fills follow the theme
+  fetch("assets/brand/Chairlogo_new_engl.svg").then((r) => r.text()).then((s) => { document.getElementById("logo").innerHTML = s; }).catch(() => {});
+</script>
+</body>
+</html>

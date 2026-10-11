@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#00103a">
+<title>Feeder flights to rail — visurail</title>
+<link rel="icon" href="../../assets/brand/Bildmarke.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../assets/css/visurail.css">
+<style>
+  .lbl{fill:var(--muted);font-size:12px}
+  .hub{fill:var(--logo)}
+  .rail{stroke:var(--accent);stroke-width:5;stroke-linecap:round}
+  .feeder{stroke:var(--muted);stroke-width:2;stroke-dasharray:5 4}
+  .long{stroke:var(--orange);stroke-width:2;fill:none}
+  .two{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;align-items:center}
+  @media (max-width:760px){.two{grid-template-columns:1fr}}
+  .delta.up{color:var(--red)} .delta.down{color:var(--accent)}
+  details{margin-top:10px;font-size:14px}
+  details label{display:flex;gap:8px;align-items:center;margin:6px 0;color:var(--muted)}
+  details input{width:90px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:3px 6px;font:inherit}
+</style>
+</head>
+<body data-root="../../" data-slug="air-hsr-slot-reuse">
+<main class="wrap">
+  <div id="vhead"></div>
+  <div id="essay"></div>
+
+  <section class="prose">
+    <div class="kicker-s">Field guide</div>
+    <h2>The slot is the catch</h2>
+    <p>Moving short feeder flights onto high-speed rail looks like a clear climate gain. At a <b>congested hub</b>, though, every
+      feeder flight holds a runway slot. Once the flight moves to rail, the slot is free, and airlines can fill it again, often with a
+      longer and more profitable route.</p>
+    <p>Dobruszkes studies Frankfurt Airport ex post, over a period in which airport capacity stayed stable. The paper finds that
+      air/HSR integration did not reduce aviation's climate impact there, because freed slots were reused. Integration is not a
+      climate fix on its own; its effect depends on what happens to the slots.</p>
+  </section>
+
+  <section class="deeper">
+    <h2><i data-icon="layers"></i> Go deeper: explore the model</h2>
+    <p class="note">How many feeders move, how many slots are reused, and how far the new flights go. All assumptions are editable.</p>
+  <div class="panel">
+    <div class="controls">
+      <label>Feeder flights moved to rail <input type="range" id="sub" min="0" max="100" value="100"> <output id="subO"></output></label>
+      <label>Freed slots reused <input type="range" id="reuse" min="0" max="100" value="80"> <output id="reuseO"></output></label>
+      <label>Stage length of reused slots <input type="range" id="len" min="500" max="9000" step="100" value="2500"> <output id="lenO"></output></label>
+    </div>
+    <div class="two">
+      <div class="viz" id="map"></div>
+      <div>
+        <div class="kv" id="kv"></div>
+        <div class="viz" id="bar" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <div class="readout" id="readout"></div>
+    <details>
+      <summary>Assumptions (editable)</summary>
+      <label>Feeder flights / day <input type="number" id="nF" value="40" min="0" max="400"></label>
+      <label>CO₂ per flight, landing + take-off (t) <input type="number" id="lto" value="2.5" step="0.1" min="0"></label>
+      <label>CO₂ per km, narrow-body (t) <input type="number" id="nb" value="0.011" step="0.001" min="0"></label>
+      <label>CO₂ per km, wide-body above 3,000 km (t) <input type="number" id="wb" value="0.025" step="0.001" min="0"></label>
+      <label>CO₂ per replacement train (t) <input type="number" id="rail" value="0.3" step="0.1" min="0"></label>
+    </details>
+  </div>
+
+    <p class="note"><b>Simplifications:</b> generic hub, made-up feeder distances, and a two-class linear emission model per flight.
+      Rail emissions are a flat value per train. These are <b>not</b> figures from the paper, which works with observed Frankfurt traffic.</p>
+  </section>
+
+  <section class="refs prose" id="vcite"></section>
+</main>
+
+<script src="../../assets/js/cro-icons.js"></script>
+<script src="../../assets/js/site.js"></script>
+<script src="../../assets/js/taxonomy.js"></script>
+<script src="../../assets/js/entries.js"></script>
+<script src="../../assets/js/vizpage.js"></script>
+<script src="../../assets/js/essay.js"></script>
+<script>
+(function () {
+  const { svg, css } = window.VR;
+  const $ = (id) => document.getElementById(id);
+  // made-up feeder routes from a generic hub (distance km, share of feeder flights, bearing deg)
+  const FEED = [
+    { n: "Feeder A", km: 150, share: 0.3, deg: 320 },
+    { n: "Feeder B", km: 160, share: 0.25, deg: 150 },
+    { n: "Feeder C", km: 190, share: 0.25, deg: 95 },
+    { n: "Feeder D", km: 180, share: 0.2, deg: 10 },
+  ];
+  const num = (id) => Math.max(0, +$(id).value || 0);
+
+  function model() {
+    const nF = num("nF"), sub = num("sub") / 100, reuse = num("reuse") / 100, len = num("len");
+    const lto = num("lto"), nb = num("nb"), wb = num("wb"), rail = num("rail");
+    const co2Flight = (km) => lto + km * (km > 3000 ? wb : nb);
+    const before = FEED.reduce((s, f) => s + nF * f.share * co2Flight(f.km), 0);
+    const moved = nF * sub;
+    const removed = FEED.reduce((s, f) => s + nF * f.share * sub * co2Flight(f.km), 0);
+    const reused = moved * reuse;
+    const added = reused * co2Flight(len) + moved * rail;
+    const after = before - removed + added;
+    // reuse share at which the change is zero
+    const perReuse = moved * co2Flight(len);
+    const breakEven = perReuse > 0 ? (removed - moved * rail) / perReuse : Infinity;
+    return { before, after, removed, added, moved, reused, breakEven, len };
+  }
+
+  const mapSvg = svg("svg", { viewBox: "0 0 420 420", role: "img", "aria-label": "Hub with feeder and long-haul routes" }, $("map"));
+  const barSvg = svg("svg", { viewBox: "0 0 400 130", role: "img", "aria-label": "CO2 before and after" }, $("bar"));
+
+  function draw() {
+    $("subO").textContent = $("sub").value + " %";
+    $("reuseO").textContent = $("reuse").value + " %";
+    $("lenO").textContent = (+$("len").value).toLocaleString("en") + " km";
+    const m = model(), sub = num("sub") / 100;
+    const C = 210;
+    mapSvg.innerHTML = "";
+    // long-haul arcs for reused slots (up to 10 drawn)
+    const nArc = Math.min(10, Math.round(m.reused / Math.max(1, num("nF")) * 10));
+    const r = 60 + Math.min(1, m.len / 9000) * 140;
+    for (let i = 0; i < nArc; i++) {
+      const a = ((200 + i * 16) * Math.PI) / 180;
+      const ex = C + Math.cos(a) * r, ey = C + Math.sin(a) * r;
+      svg("path", { d: `M${C},${C} Q${C + Math.cos(a - 0.4) * r * 0.6},${C + Math.sin(a - 0.4) * r * 0.6} ${ex},${ey}`, class: "long" }, mapSvg);
+      svg("circle", { cx: ex, cy: ey, r: 3.5, fill: css("--orange") }, mapSvg);
+    }
+    FEED.forEach((f) => {
+      const a = (f.deg * Math.PI) / 180, d = f.km * 0.5;
+      const ex = C + Math.cos(a) * d, ey = C + Math.sin(a) * d;
+      if (sub > 0) svg("line", { x1: C, y1: C, x2: ex, y2: ey, class: "rail", opacity: 0.25 + 0.75 * sub }, mapSvg);
+      if (sub < 1) svg("line", { x1: C, y1: C, x2: ex, y2: ey, class: "feeder", opacity: 1 - sub }, mapSvg);
+      svg("circle", { cx: ex, cy: ey, r: 5, fill: css("--logo") }, mapSvg);
+      svg("text", { x: ex + 8, y: ey + 4, class: "lbl" }, mapSvg).textContent = f.n;
+    });
+    svg("circle", { cx: C, cy: C, r: 13, class: "hub" }, mapSvg);
+    svg("text", { x: C + 18, y: C - 16, class: "lbl" }, mapSvg).textContent = "hub airport";
+
+    const delta = m.after - m.before, pct = m.before ? (delta / m.before) * 100 : 0;
+    $("kv").innerHTML =
+      `<div><b>${Math.round(m.moved)}</b><span>feeder flights/day moved to rail</span></div>` +
+      `<div><b>${Math.round(m.reused)}</b><span>freed slots reused for longer flights</span></div>` +
+      `<div><b class="delta ${delta > 0 ? "up" : "down"}">${delta > 0 ? "+" : ""}${delta.toFixed(0)} t</b><span>CO₂/day vs. before (feeder + reuse)</span></div>` +
+      `<div><b>${isFinite(m.breakEven) ? Math.max(0, Math.min(100, m.breakEven * 100)).toFixed(0) + " %" : "–"}</b><span>reuse share where the gain is gone</span></div>`;
+
+    barSvg.innerHTML = "";
+    const mx = Math.max(m.before, m.after, 1) * 1.1, W = 260;
+    [["before", m.before, css("--muted")], ["after", m.after, delta > 0 ? css("--red") : css("--accent")]].forEach(([t, v, c], i) => {
+      const y = 18 + i * 52;
+      svg("text", { x: 0, y: y + 22, class: "lbl" }, barSvg).textContent = t;
+      svg("rect", { x: 60, y, width: (v / mx) * W, height: 32, rx: 4, fill: c }, barSvg);
+      svg("text", { x: 66 + (v / mx) * W, y: y + 22, class: "lbl" }, barSvg).textContent = v.toFixed(0) + " t/day";
+    });
+    $("readout").innerHTML = delta > 0
+      ? `With these settings, emissions at the hub system <b>rise by ${pct.toFixed(0)} %</b>: the reused slots emit more than the feeder flights did.`
+      : `With these settings, emissions <b>fall by ${(-pct).toFixed(0)} %</b>. Increase slot reuse or stage length to see where the gain disappears.`;
+  }
+
+  ["sub", "reuse", "len", "nF", "lto", "nb", "wb", "rail"].forEach((id) => $(id).addEventListener("input", draw));
+  document.addEventListener("visurail:theme", draw);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  draw();
+})();
+</script>
+<script>
+/* ---- visual essay (toy numbers: 40 feeders of ~170 km, 80 % of slots reused at 1,200 km) ---- */
+(function () {
+  const { svg, text, mover } = window.VR;
+  let HX = 800, HY = 400, FEED, LONG, P = false;
+  const FEED0 = [[-250, -150, "Feeder A"], [270, -120, "Feeder B"], [230, 180, "Feeder C"], [-210, 190, "Feeder D"]];
+  const LONG0 = [[-650, -300], [-680, -40], [-560, 280], [620, -320], [690, -60], [600, 300], [-200, -360], [180, -370]];
+  // portrait (phone): squeeze horizontally, stretch vertically
+  const setLayout = (api) => {
+    P = api.portrait; [HX, HY] = P ? [450, 470] : [800, 400];
+    const kx = P ? 0.62 : 1, ky = P ? 1.2 : 1;
+    FEED = FEED0.map(([dx, dy, n]) => [dx * (P ? 0.9 : 1), dy * (P ? 1.4 : 1), n]);
+    LONG = LONG0.map(([dx, dy]) => [dx * kx, dy * ky]);
+  };
+  const plane = (parent, d, dur, begin = 0) => {
+    const g = svg("g", {}, parent);
+    const inner = svg("g", { transform: "rotate(90) scale(2.2) translate(-12 -12)", style: "color:#fff" }, g);
+    inner.innerHTML = window.CRO_ICONS.plane;
+    svg("animateMotion", { path: d, dur: dur + "s", begin: begin + "s", repeatCount: "indefinite", rotate: "auto" }, g);
+  };
+  function hub(st) {
+    svg("rect", { x: HX - 26, y: HY - 26, width: 52, height: 52, fill: "#fff", transform: `rotate(45 ${HX} ${HY})` }, st);
+    text(st, HX - 56, HY + 10, "hub airport", { class: "lbl big", "text-anchor": "end" });
+  }
+  function cities(st) {
+    FEED.forEach(([dx, dy, n]) => {
+      svg("rect", { x: HX + dx - 11, y: HY + dy - 11, width: 22, height: 22, class: "stn", transform: `rotate(45 ${HX + dx} ${HY + dy})` }, st);
+      text(st, HX + dx, HY + dy + (dy > 0 ? 50 : -26), n, { class: "lbl", "text-anchor": "middle" });
+    });
+  }
+  const arc = (dx, dy, k = 0.25) => `M${HX + dx} ${HY + dy} Q${HX + dx / 2 - dy * k} ${HY + dy / 2 + dx * k} ${HX} ${HY}`;
+  const out = (dx, dy, k = 0.18) => `M${HX} ${HY} Q${HX + dx / 2 - dy * k} ${HY + dy / 2 + dx * k} ${HX + dx} ${HY + dy}`;
+  function rail(st, api, from) {
+    const g = svg("g", { class: api.enter(from) }, st);
+    FEED.forEach(([dx, dy], i) => {
+      const d = `M${HX + dx} ${HY + dy} L${HX} ${HY}`;
+      svg("path", { d, stroke: "var(--st-acc)", "stroke-width": 10, fill: "none" }, g);
+      mover(g, d + ` L${HX + dx} ${HY + dy}`, { dur: 6, begin: -i * 1.4, color: "#fff", w: 40, h: 14 });
+    });
+  }
+  function slots(st, n, api, from) {
+    const g = svg("g", { class: api.enter(from) }, st);
+    const sx = P ? HX - 70 : HX + 120, sy = P ? HY + 120 : HY - 22;
+    for (let i = 0; i < n; i++) svg("rect", { x: sx + (i % 4) * 34, y: sy + Math.floor(i / 4) * 34, width: 26, height: 26, fill: "var(--st-org)" }, g);
+    text(g, P ? HX : sx, sy + (P ? 112 : 102), "freed runway slots", { class: "lbl", "text-anchor": P ? "middle" : "start" });
+  }
+  const before = 176, after = 514;
+  const steps = [
+    { title: "A hub airport", text: "Short feeder flights bring passengers from nearby cities to a busy hub.",
+      draw(st) {
+        FEED.forEach(([dx, dy], i) => { svg("path", { d: arc(dx, dy), stroke: "var(--st-line)", "stroke-width": 3, fill: "none", "stroke-dasharray": "10 10" }, st); plane(st, arc(dx, dy), 5, -i * 1.2); });
+        cities(st); hub(st);
+      } },
+    { title: "Move the feeders to rail", text: "High-speed rail takes over the short trips. The feeder flights disappear. Less CO₂?",
+      draw(st, api) { rail(st, api, 1); cities(st); hub(st); } },
+    { title: "Each flight leaves a slot", text: "Every feeder flight that moved to rail freed a <b>runway slot</b>. At a congested hub, a free slot is valuable.",
+      draw(st, api) { rail(st, api, -1); cities(st); hub(st); slots(st, 8, api, 2); } },
+    { title: "Slots don't stay empty", text: "Airlines fill the freed slots, and often with <b>longer flights</b>.",
+      draw(st, api) {
+        rail(st, api, -1); cities(st);
+        const g = svg("g", { class: api.enter(3) }, st);
+        LONG.forEach(([dx, dy], i) => { svg("path", { d: out(dx, dy), stroke: "var(--st-org)", "stroke-width": 3, fill: "none" }, g); plane(g, out(dx, dy), 7, -i * 0.9); });
+        hub(st);
+      } },
+    { title: "The balance can tip", text: "In this toy example the longer flights emit almost three times what the feeders did. Dobruszkes (2025) finds the same direction at Frankfurt: integration alone did not cut aviation's climate impact.",
+      draw(st, api) {
+        const g = svg("g", { class: api.enter(4) }, st), mx = 560, X = P ? 60 : 420, w = (v) => (v / mx) * (P ? 700 : 900);
+        [["before", before, "var(--st-muted)"], ["after", after, "var(--st-org)"]].forEach(([t, v, c], i) => {
+          const y = P ? 200 + i * 260 : 170 + i * 170;
+          if (P) text(g, X, y - 22, `${t}: ${v} t CO₂ / day`, { class: "lbl big" });
+          else {
+            text(g, X - 30, y + 70, t, { class: "lbl big", "text-anchor": "end" });
+            text(g, X + w(v) + 50, y + 62, `${v} t CO₂ / day`, { class: "lbl big" });
+          }
+          svg("path", { d: `M${X} ${y} H${X + w(v)} L${X + w(v) + 30} ${y + 50} L${X + w(v)} ${y + 100} H${X} Z`, fill: c }, g);
+        });
+        if (P) { text(g, X, 780, "toy numbers: 40 feeder flights moved,", { class: "lbl" }); text(g, X, 820, "80 % of slots reused for 1,200 km flights", { class: "lbl" }); }
+        else text(g, X, 520, "toy numbers: 40 feeder flights moved, 80 % of slots reused for 1,200 km flights", { class: "lbl" });
+      } },
+  ];
+  steps.forEach((s) => { const d = s.draw; s.draw = (st, api) => { setLayout(api); d(st, api); }; });
+  VR.essay({ mount: document.getElementById("essay"), steps });
+})();
+</script>
+</body>
+</html>
