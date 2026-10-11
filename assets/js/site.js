@@ -35,7 +35,7 @@
     '<a href="https://visualtransportationscience.org/">Visual Transportation Science</a> — the original idea of ' +
     "pairing transportation papers with interactive visualizations. visurail applies it to rail only.</div>" +
     "<div><h4>Licences</h4>Site code: Apache-2.0. Each visualization credits its source paper " +
-    "(CC BY). TUD logos are trademarks, not covered by Apache-2.0. " +
+    "(CC BY, or with the authors' permission). TUD logos are trademarks, not covered by Apache-2.0. " +
     `<a href="${root}about.html#licences">Details</a></div>` +
     "</div>";
   document.body.append(footer);

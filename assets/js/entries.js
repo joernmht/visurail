@@ -1,7 +1,8 @@
-/* visurail — catalog entries (prototype: 3 works).
+/* visurail — catalog entries (prototype: 4 works).
    One object per visualization. `verify` lists metadata that still has to be checked
    against the publisher page before the site goes public (see GitHub issues).
-   Licence rule: only works whose paper is CC BY. Code we do NOT copy from GPL repos —
+   Licence rule: only works whose paper is CC BY, or that the authors have cleared for visurail
+   (then `license` names the copyright holder and `licenseNote` says so on the page). Code we do NOT copy from GPL repos —
    visualizations are independent re-implementations of the published idea. */
 window.VISURAIL_ENTRIES = [
   {
@@ -59,5 +60,24 @@ window.VISURAIL_ENTRIES = [
     segment: "high-speed", method: "survey / empirical", vizType: "map",
     keywords: ["air-rail", "intermodality", "Frankfurt", "slots", "climate", "high-speed rail"],
     verify: ["licence on the EJTIR landing page"],
+  },
+  {
+    slug: "maintenance-possession-timetable",
+    vizTitle: "A track closed, a timetable rebuilt",
+    teaser: "Close a track and two platforms for works, then let a solver turn trains short, delay them, and cancel only if it must.",
+    title: "Designing alternative railway timetables under infrastructure maintenance possessions",
+    authors: "Sander Van Aken, Nikola Bešinović, Rob M.P. Goverde",
+    authorsShort: "Van Aken, Bešinović & Goverde",
+    year: 2017,
+    venue: "Transportation Research Part B 98: 224–238",
+    doi: "10.1016/j.trb.2016.12.019",
+    url: "https://doi.org/10.1016/j.trb.2016.12.019",
+    license: "© Elsevier, used with the authors' permission",
+    licenseNote: "© 2017 Elsevier Ltd. Not open access; visualized here with the authors' permission. The paper itself is not reproduced on this site.",
+    code: null,
+    domain: "operations", domains2: ["infrastructure"], interfaces: [],
+    segment: "passenger", method: "optimisation", vizType: "time-space",
+    keywords: ["timetable", "maintenance", "possession", "TTAP", "PESP", "MILP", "short-turning", "Netherlands"],
+    verify: [],
   },
 ];

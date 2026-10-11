@@ -41,13 +41,15 @@ The catalog is organised on two axes (`assets/js/taxonomy.js`):
 
 ## Prototype entries
 
-| Visualization | Source (CC BY) | Domain / interface |
+| Visualization | Source (CC BY unless noted) | Domain / interface |
 |---|---|---|
 | One timetable, three networks | Lamanna, Prisma & Medeossi 2025, PLOS ONE | Operations |
 | Own delay vs. inherited delay | Pozzobon Borin et al. 2026, arXiv:2601.16592 (FI-TW) | Operations · Rail × Weather |
 | Feeder flights to rail: where do the slots go? | Dobruszkes 2025, EJTIR | Planning · Rail × Air |
+| A track closed, a timetable rebuilt | Van Aken, Bešinović & Goverde 2017, TR Part B (© Elsevier, with the authors' permission) | Operations · Infrastructure |
 
-All three are simplified toy models; no numbers on the pages come from the papers' data.
+All are simplified toy models; no numbers on the pages come from the papers' data, except the possession
+essay's last step, which quotes the case-study sizes and solve times from the paper's Tables 2 and 4.
 Licence metadata still needs checking on the publisher pages; see the issues.
 
 ## Layout
