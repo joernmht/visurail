@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#00103a">
+<title>A track closed, a timetable rebuilt — visurail</title>
+<link rel="icon" href="../../assets/brand/Bildmarke.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../../assets/css/visurail.css">
+<style>
+  .grid-l{stroke:var(--line);stroke-width:1}
+  .lbl{fill:var(--muted);font-size:12px}
+  .lbl.hi{fill:var(--ink);font-weight:500}
+  .stbtn{cursor:pointer}
+  .stbtn:hover .lbl{fill:var(--ink)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .seg-toggle{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .seg-toggle button{border:0;background:var(--card);color:var(--muted);padding:7px 12px;font:inherit;font-size:14px;cursor:pointer}
+  .seg-toggle button[aria-pressed="true"]{background:var(--red);color:#fff}
+  .controls select{font:inherit;font-size:14px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:4px 6px}
+  .ctl-title{font-size:13px;color:var(--muted);margin-right:4px}
+  .plat{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+  .plat label{width:auto !important}
+  table.tt{border-collapse:collapse;font-size:13px;width:100%}
+  table.tt td,table.tt th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}
+  table.tt th{color:var(--muted);font-weight:500}
+  .scroll{overflow-x:auto}
+  @media (max-width:700px){ #ts .lbl,#occ .lbl{font-size:21px} }
+</style>
+</head>
+<body data-root="../../" data-slug="maintenance-possession-timetable">
+<main class="wrap">
+  <div id="vhead"></div>
+  <div id="essay"></div>
+
+  <section class="prose">
+    <div class="kicker-s">Field guide</div>
+    <h2>Planned works, planned timetable</h2>
+    <p>Track renewals, platform rebuilds and new signalling need the track itself. For hours, days or weeks, part of the network
+      is a <b>possession</b>: closed to trains and handed to the works. The regular timetable then no longer fits, and someone has to
+      design a new one. In the Netherlands that was a team of about 40 planners, starting six months ahead. Producing one feasible
+      timetable for one day of works took about 14 weeks, by hand, one small part of the network at a time.</p>
+    <p>Van Aken, Bešinović and Goverde turn this into an optimisation problem, the <b>train timetable adjustment problem (TTAP)</b>.
+      It takes the original periodic timetable and the list of closed tracks and platforms, and finds the alternative timetable
+      that changes the least. It may use four measures: <b>retiming</b> (delays only, so no passenger misses a train that leaves
+      early), <b>reordering</b>, <b>short-turning</b> at the last station before a closed section where a train can reverse, and
+      <b>cancelling</b>. Delay is counted on arrivals, because that is what passengers notice. One cancelled line weighs as much as
+      100&nbsp;000 seconds of delay, so the model only cancels when no delay within the limit works.</p>
+    <p>The model extends the <b>periodic event scheduling problem (PESP)</b>, the standard model for cyclic timetables. Short-turning
+      is decided before the optimisation, by a preprocessing step that splits train lines at the closure. Two further ideas make it
+      work on real networks. A binary variable per event lets a delay <b>cross the hour boundary</b>, so a train delayed
+      past :59 runs at :01 instead of being cancelled. And <b>station capacity</b> constraints, which count the trains present at
+      a station, are added by <b>row generation</b>: only for stations where a solution actually overloads the platforms, and
+      then the model is solved again. That kept the largest case, the Randstad area with about a third of all Dutch train events,
+      solvable in under seven minutes.</p>
+  </section>
+
+  <section class="deeper">
+    <h2><i data-icon="layers"></i> Go deeper: plan your own possession</h2>
+    <p class="note">Close track sections and platforms, set the longest delay allowed, and the toy solver builds the alternative
+      timetable for one hour (it repeats every hour). Click a station name for its platform use below the diagram.</p>
+  <div class="panel">
+    <div class="controls">
+      <span class="ctl-title">Close track</span>
+      <div class="seg-toggle" role="group" aria-label="Close track section" id="secs"></div>
+    </div>
+    <div class="controls plat" id="plats"><span class="ctl-title">Platforms open</span></div>
+    <div class="controls">
+      <label>Longest delay <input type="range" id="dmax" min="0" max="15" value="8"> <output id="dmaxO"></output></label>
+      <label><input type="checkbox" id="wrap" checked> Delays may cross into the next hour</label>
+      <button class="btn ghost" type="button" id="preset">Essay scenario</button>
+      <button class="btn ghost" type="button" id="reset">No works</button>
+    </div>
+    <div class="viz" id="ts"></div>
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i>intercity (IC)</span>
+      <span><i style="background:var(--ink)"></i>regional (R)</span>
+      <span><i style="background:var(--orange)"></i>delayed in the alternative timetable</span>
+      <span><i style="background:var(--muted);opacity:.5"></i>original path</span>
+      <span><i style="background:var(--red)"></i>possession / cancelled</span>
+    </div>
+    <div class="viz" id="occ" style="margin-top:10px"></div>
+    <div class="readout" id="readout"></div>
+  </div>
+
+    <details><summary>The toy timetable</summary><div class="scroll"><table class="tt" id="tt"></table></div></details>
+    <p class="note"><b>Simplifications:</b> one made-up five-station double-track corridor with eight train lines per hour, not the
+      Dutch network. Each train piece is shifted as a whole (the paper retimes every event), times are in whole minutes, platform tracks
+      stand for all station tracks, and the search is a small exact branch-and-bound in your browser instead of a MILP solved with CPLEX.
+      Short-turning, the delay-only rule, the hour-crossing rule and the objective weights (100&nbsp;000 per cancelled line, 1 per second
+      of arrival delay) follow the paper. The figures for the Dutch case studies in the essay come from the paper's tables.</p>
+  </section>
+
+  <section class="refs prose" id="vcite"></section>
+</main>
+
+<script src="../../assets/js/cro-icons.js"></script>
+<script src="../../assets/js/site.js"></script>
+<script src="../../assets/js/taxonomy.js"></script>
+<script src="../../assets/js/entries.js"></script>
+<script src="../../assets/js/vizpage.js"></script>
+<script src="../../assets/js/essay.js"></script>
+<script src="model.js"></script>
+<script>
+/* ---- shared time–space drawing: one hour, x = minute of the hour, y = position on the line ---- */
+(function () {
+  const { svg } = window.VR;
+  const { T, S } = window.TTAP;
+  let clipN = 0;
+  // geometry for a box; times beyond the hour are drawn again one hour earlier, clipped to the box
+  window.TSD = function (parent, { X0, X1, Y0, Y1 }) {
+    const kmMax = S[S.length - 1].km;
+    const x = (t) => X0 + (t / T) * (X1 - X0), y = (km) => Y0 + (km / kmMax) * (Y1 - Y0);
+    const id = "tsclip" + ++clipN;
+    const defs = svg("defs", {}, parent);
+    svg("rect", { x: X0, y: Y0 - 30, width: X1 - X0, height: Y1 - Y0 + 60 }, svg("clipPath", { id }, defs));
+    const clipped = (attrs = {}) => svg("g", { "clip-path": `url(#${id})`, ...attrs }, parent);
+    const pts = (p, d) => {
+      const out = [];
+      p.ev.forEach((e) => {
+        const km = S[e.st].km;
+        if (e.arr !== null) out.push([e.arr + d, km]);
+        if (e.dep !== null && e.dep !== e.arr) out.push([e.dep + d, km]);
+      });
+      return out;
+    };
+    // path string, drawn at offsets 0, −T, −2T so a train that runs into the next hour wraps round
+    const pathD = (p, d = 0) => [0, -T, -2 * T].map((o) => pts(p, d).map(([t, km], i) => `${i ? "L" : "M"}${x(t + o).toFixed(1)} ${y(km).toFixed(1)}`).join(" ")).join(" ");
+    return { x, y, clipped, pathD, pts, X0, X1, Y0, Y1 };
+  };
+})();
+</script>
+<script>
+/* ---- Go deeper: interactive explorer ---- */
+(function () {
+  const { svg, css } = window.VR;
+  const M = window.TTAP, { S, T } = M;
+  const $ = (id) => document.getElementById(id);
+  const fresh = () => ({ closed: new Set(), plat: S.map((s) => s.plat), dmax: 8, wrap: true, focus: 2 });
+  const essayCase = () => ({ closed: new Set([2]), plat: [4, 2, 1, 2, 4], dmax: 8, wrap: true, focus: 2 });
+  let state = essayCase();
+
+  const secBox = $("secs");
+  S.slice(0, -1).forEach((s, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.sec = i; b.textContent = `${s.n}–${S[i + 1].n}`;
+    b.addEventListener("click", () => { state.closed.has(i) ? state.closed.delete(i) : state.closed.add(i); draw(); });
+    secBox.appendChild(b);
+  });
+  S.forEach((s, i) => {
+    const l = document.createElement("label");
+    l.innerHTML = `${s.n} <select data-st="${i}" aria-label="Open platforms at ${s.n}">` +
+      Array.from({ length: s.plat }, (_, k) => `<option value="${k + 1}">${k + 1} of ${s.plat}</option>`).join("") + "</select>";
+    l.querySelector("select").addEventListener("change", (e) => { state.plat[i] = +e.target.value; draw(); });
+    $("plats").appendChild(l);
+  });
+
+  // timetable table
+  const fmt = (t) => t === null ? "" : ":" + String(Math.round(M.mod(t))).padStart(2, "0") + (t % 1 ? "½" : "");
+  $("tt").innerHTML = "<tr><th>Line</th>" + S.map((s) => `<th>${s.n}</th>`).join("") + "</tr>" +
+    M.original().map((L) => "<tr><td>" + L.id + (L.dir > 0 ? " →" : " ←") + "</td>" + S.map((_, st) => {
+      const e = L.ev.find((v) => v.st === st);
+      return "<td>" + (!e.stop ? "|" : [fmt(e.arr), fmt(e.dep)].filter(Boolean).join(" – ")) + "</td>";
+    }).join("") + "</tr>").join("");
+
+  const tsBox = svg("svg", { viewBox: "0 0 1000 440", role: "img", "aria-label": "Time–space diagram of the alternative timetable" }, $("ts"));
+  const occBox = svg("svg", { viewBox: "0 0 1000 170", role: "img", "aria-label": "Trains present at the selected station" }, $("occ"));
+
+  function draw() {
+    $("dmaxO").textContent = state.dmax + " min";
+    $("dmax").value = state.dmax; $("wrap").checked = state.wrap;
+    secBox.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", state.closed.has(+b.dataset.sec)));
+    $("plats").querySelectorAll("select").forEach((s) => { s.value = state.plat[+s.dataset.st]; });
+    const R = M.solve(state);
+    const orig = M.original();
+
+    tsBox.innerHTML = "";
+    const G = window.TSD(tsBox, { X0: 150, X1: 980, Y0: 20, Y1: 390 });
+    for (let m = 0; m <= T; m += 10) {
+      svg("line", { x1: G.x(m), x2: G.x(m), y1: G.Y0, y2: G.Y1, class: "grid-l" }, tsBox);
+      svg("text", { x: G.x(m), y: G.Y1 + 18, class: "lbl", "text-anchor": "middle" }, tsBox).textContent = ":" + String(m % 60).padStart(2, "0");
+    }
+    state.closed.forEach((i) => {
+      svg("rect", { x: G.X0, y: G.y(S[i].km), width: G.X1 - G.X0, height: G.y(S[i + 1].km) - G.y(S[i].km), fill: css("--red"), opacity: 0.16 }, tsBox);
+      svg("text", { x: G.X1 - 8, y: (G.y(S[i].km) + G.y(S[i + 1].km)) / 2 + 4, class: "lbl", "text-anchor": "end", fill: css("--red") }, tsBox).textContent = "track closed";
+    });
+    S.forEach((s, i) => {
+      svg("line", { x1: G.X0, x2: G.X1, y1: G.y(s.km), y2: G.y(s.km), class: "grid-l" }, tsBox);
+      const g = svg("g", { class: "stbtn", tabindex: 0, role: "button", "aria-label": `Show platform use at ${s.n}` }, tsBox);
+      svg("rect", { x: 0, y: G.y(s.km) - 11, width: G.X0 - 4, height: 22, fill: "transparent" }, g);
+      const t = svg("text", { x: G.X0 - 10, y: G.y(s.km) + 4, class: "lbl" + (state.focus === i ? " hi" : ""), "text-anchor": "end" }, g);
+      t.textContent = s.n + (state.plat[i] < s.plat ? ` ${state.plat[i]}/${s.plat}` : "");
+      const pick = () => { state.focus = i; draw(); };
+      g.addEventListener("click", pick);
+      g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    });
+    const ghost = G.clipped();
+    orig.forEach((L) => svg("path", { d: G.pathD(L), fill: "none", stroke: css("--muted"), "stroke-width": 1.2, opacity: 0.45, "stroke-dasharray": "4 4" }, ghost));
+    const live = G.clipped();
+    R.cut.forEach((c) => svg("path", { d: G.pathD(c), fill: "none", stroke: css("--red"), "stroke-width": 2, "stroke-dasharray": "2 5" }, live));
+    R.pieces.forEach((p) => {
+      if (p.cancelled) return svg("path", { d: G.pathD(p), fill: "none", stroke: css("--red"), "stroke-width": 2, "stroke-dasharray": "2 5" }, live);
+      const col = p.d ? css("--orange") : p.type === "IC" ? css("--accent") : css("--ink");
+      svg("path", { d: G.pathD(p, p.d), fill: "none", stroke: col, "stroke-width": p.type === "IC" ? 2.6 : 2, "stroke-linejoin": "round" }, live);
+      p.ev.filter((e) => e.turned).forEach((e) => {
+        const t = M.mod((e.arr ?? e.dep) + p.d);
+        svg("circle", { cx: G.x(t), cy: G.y(S[e.st].km), r: 4, fill: col }, live);
+      });
+    });
+
+    // platform use at the focus station
+    occBox.innerHTML = "";
+    const st = state.focus, cap = state.plat[st], c = M.presence(R, st);
+    const O = { X0: 150, X1: 980, Y0: 20, Y1: 140 }, top = Math.max(S[st].plat, ...c, 1);
+    const ox = (s) => O.X0 + (s / (2 * T)) * (O.X1 - O.X0), oy = (n) => O.Y1 - (n / top) * (O.Y1 - O.Y0);
+    svg("text", { x: O.X0 - 10, y: O.Y0 + 10, class: "lbl", "text-anchor": "end" }, occBox).textContent = "trains";
+    svg("text", { x: O.X0 - 10, y: O.Y1 - 2, class: "lbl hi", "text-anchor": "end" }, occBox).textContent = S[st].n;
+    c.forEach((n, s) => {
+      if (!n) return;
+      svg("rect", { x: ox(s), y: oy(Math.min(n, cap)), width: ox(1) - ox(0) + 0.4, height: O.Y1 - oy(Math.min(n, cap)), fill: css("--accent"), opacity: 0.75 }, occBox);
+      if (n > cap) svg("rect", { x: ox(s), y: oy(n), width: ox(1) - ox(0) + 0.4, height: oy(cap) - oy(n), fill: css("--red") }, occBox);
+    });
+    svg("line", { x1: O.X0, x2: O.X1, y1: O.Y1, y2: O.Y1, class: "grid-l" }, occBox);
+    svg("line", { x1: O.X0, x2: O.X1, y1: oy(cap), y2: oy(cap), stroke: css("--yellow"), "stroke-width": 1.6, "stroke-dasharray": "6 4" }, occBox);
+    svg("text", { x: O.X1, y: oy(cap) - 5, class: "lbl", "text-anchor": "end" }, occBox).textContent = `${cap} of ${S[st].plat} platform tracks open`;
+    for (let m = 0; m <= T; m += 10) svg("text", { x: ox(2 * m), y: O.Y1 + 18, class: "lbl", "text-anchor": "middle" }, occBox).textContent = ":" + String(m % 60).padStart(2, "0");
+
+    const pre = R.cut.length, canc = R.cancelled;
+    $("readout").innerHTML = (R.cost === Infinity ? "No alternative timetable found. " : "") +
+      `<b>${R.shortTurned}</b> of 8 lines short-turned, <b>${pre}</b> line part${pre === 1 ? "" : "s"} lost in preprocessing (no place to turn), ` +
+      `<b>${canc}</b> cancelled by the solver. Arrival delay in total: <b>${R.delayMin} min</b> per hour. ` +
+      `Objective: <b>${R.cost === Infinity ? "–" : R.cost.toLocaleString("en")}</b> (100 000 per cancellation + 1 per second of delay). ` +
+      `Search: ${R.nodes.toLocaleString("en")} nodes, ${R.ms < 1 ? "<1" : Math.round(R.ms)} ms${R.stopped ? " (stopped early: best found so far)" : ""}.`;
+  }
+
+  $("dmax").addEventListener("input", (e) => { state.dmax = +e.target.value; draw(); });
+  $("wrap").addEventListener("change", (e) => { state.wrap = e.target.checked; draw(); });
+  $("preset").addEventListener("click", () => { state = essayCase(); draw(); });
+  $("reset").addEventListener("click", () => { state = fresh(); draw(); });
+  document.addEventListener("visurail:theme", draw);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  draw();
+})();
+</script>
+<script>
+/* ---- visual essay ---- */
+(function () {
+  const { svg, text } = window.VR;
+  const M = window.TTAP, { S, T } = M;
+  const orig = M.original();
+  const CLOSED = new Set([2]);
+  const split = M.shortTurn(orig, CLOSED).pieces.map((p) => ({ ...p, d: 0 }));
+  const solved = M.solve({ closed: CLOSED, plat: [4, 2, 1, 2, 4], dmax: 8, wrap: true });
+  const noWrap = M.solve({ closed: CLOSED, plat: [4, 2, 1, 2, 4], dmax: 8, wrap: false });
+  const tight = M.solve({ closed: CLOSED, plat: [4, 2, 1, 2, 4], dmax: 1, wrap: true });
+  const wrapper = solved.pieces.find((p) => !p.cancelled && p.d && p.ev.some((e) => e.arr !== null && M.mod(e.arr) + p.d >= T));
+
+  let P = false, B;
+  const setLayout = (api) => { P = api.portrait; B = P ? { X0: 190, X1: 860, Y0: 90, Y1: 860 } : { X0: 230, X1: 1530, Y0: 80, Y1: 600 }; };
+  const col = (p) => p.d ? "var(--st-org)" : p.type === "IC" ? "var(--st-acc)" : "#fff";
+
+  function frame(st, { plat = null } = {}) {
+    const G = window.TSD(st, B);
+    for (let m = 0; m <= T; m += P ? 20 : 10) {
+      svg("line", { x1: G.x(m), x2: G.x(m), y1: B.Y0, y2: B.Y1, stroke: "var(--st-line)", "stroke-width": 1, opacity: 0.6 }, st);
+      text(st, G.x(m), B.Y1 + 44, ":" + String(m % 60).padStart(2, "0"), { class: "lbl", "text-anchor": "middle" });
+    }
+    S.forEach((s, i) => {
+      svg("line", { x1: B.X0, x2: B.X1, y1: G.y(s.km), y2: G.y(s.km), stroke: "var(--st-line)", "stroke-width": 1.5 }, st);
+      text(st, B.X0 - 22, G.y(s.km) + 8, s.n, { class: "lbl", "text-anchor": "end" });
+      if (plat && plat[i] < s.plat) text(st, B.X0 - 22, G.y(s.km) + 38, `${plat[i]} of ${s.plat} tracks`, { class: "lbl", "text-anchor": "end", style: `fill:var(--st-red) !important;font-size:${P ? 24 : 20}px` });
+    });
+    return G;
+  }
+  function band(st, G, api, from) {
+    const y0 = G.y(S[2].km), y1 = G.y(S[3].km), g = svg("g", { class: api.enter(from) }, st);
+    svg("rect", { x: B.X0, y: y0, width: B.X1 - B.X0, height: y1 - y0, fill: "var(--st-red)", opacity: 0.2 }, g);
+    svg("line", { x1: B.X0, x2: B.X1, y1: y0, y2: y0, stroke: "var(--st-red)", "stroke-width": 2, "stroke-dasharray": "8 6" }, g);
+    svg("line", { x1: B.X0, x2: B.X1, y1: y1, y2: y1, stroke: "var(--st-red)", "stroke-width": 2, "stroke-dasharray": "8 6" }, g);
+    const lw = P ? 420 : 400, ly = (y0 + y1) / 2;
+    svg("rect", { x: B.X1 - lw - 16, y: ly - 22, width: lw, height: 44, rx: 6, fill: "var(--st-bg2)", opacity: 0.85 }, g);
+    text(g, B.X1 - 32, ly + 9, "possession: track closed all day", { class: "lbl", "text-anchor": "end", style: "fill:#fff !important;font-weight:500" });
+  }
+  function trains(st, G, list, { cls = "", width = 1, ghost = false } = {}) {
+    const g = G.clipped({ class: cls });
+    list.forEach((p) => svg("path", {
+      d: G.pathD(p, ghost ? 0 : p.d || 0), fill: "none", stroke: ghost ? "var(--st-muted)" : col(p),
+      "stroke-width": (p.type === "IC" ? 5 : 3.5) * width, "stroke-linejoin": "round", opacity: ghost ? 0.4 : 1,
+      "stroke-dasharray": ghost ? "8 8" : null,
+    }, g));
+    return g;
+  }
+  function turns(st, G, list, api, from) {
+    const g = G.clipped({ class: api.enter(from) });
+    list.forEach((p) => p.ev.filter((e) => e.turned).forEach((e) => {
+      const t = M.mod((e.arr ?? e.dep) + (p.d || 0));
+      svg("circle", { cx: G.x(t), cy: G.y(S[e.st].km), r: P ? 11 : 9, fill: "var(--st-bg)", stroke: col(p), "stroke-width": 4 }, g);
+    }));
+  }
+  function occChart(st, api, list, cap, from) {
+    // trains present at Calden over the hour vs the tracks left open
+    const O = P ? { X0: 150, X1: 860, Y0: 230, Y1: 760 } : { X0: 230, X1: 1530, Y0: 120, Y1: 560 };
+    const c = M.presence({ pieces: list.map((p) => ({ ...p, cancelled: false })) }, 2), top = 3;
+    const ox = (s) => O.X0 + (s / (2 * T)) * (O.X1 - O.X0), oy = (n) => O.Y1 - (n / top) * (O.Y1 - O.Y0);
+    for (let n = 0; n <= top; n++) {
+      svg("line", { x1: O.X0, x2: O.X1, y1: oy(n), y2: oy(n), stroke: "var(--st-line)", "stroke-width": 1 }, st);
+      text(st, O.X0 - 20, oy(n) + 8, String(n), { class: "lbl", "text-anchor": "end" });
+    }
+    text(st, O.X0, O.Y0 - 34, "trains at Calden", { class: "lbl big" });
+    for (let m = 0; m <= T; m += P ? 20 : 10) text(st, ox(2 * m), O.Y1 + 44, ":" + String(m % 60).padStart(2, "0"), { class: "lbl", "text-anchor": "middle" });
+    const g = svg("g", { class: api.enter(from) }, st);
+    c.forEach((n, s) => {
+      if (!n) return;
+      svg("rect", { x: ox(s), y: oy(Math.min(n, cap)), width: ox(1) - ox(0) + 0.5, height: O.Y1 - oy(Math.min(n, cap)), fill: "var(--st-acc)" }, g);
+      if (n > cap) svg("rect", { x: ox(s), y: oy(n), width: ox(1) - ox(0) + 0.5, height: oy(cap) - oy(n), fill: "var(--st-red)" }, g);
+    });
+    svg("line", { x1: O.X0, x2: O.X1, y1: oy(3), y2: oy(3), stroke: "var(--st-muted)", "stroke-width": 2, "stroke-dasharray": "6 6" }, st);
+    text(st, O.X1, oy(3) - 12, "3 platform tracks normally", { class: "lbl", "text-anchor": "end" });
+    const lg = svg("g", { class: api.enter(from) }, st);
+    svg("line", { x1: O.X0, x2: O.X1, y1: oy(cap), y2: oy(cap), stroke: "var(--st-yel)", "stroke-width": 4, "stroke-dasharray": "12 8" }, lg);
+    text(lg, (ox(40) + ox(64)) / 2, oy(cap) - 14, `${cap} track open during the works`, { class: "lbl", "text-anchor": "middle", style: "fill:var(--st-yel) !important" });
+  }
+  function delayTags(st, G, list, api, from) {
+    const g = svg("g", { class: api.enter(from) }, st);
+    list.filter((p) => p.d && !p.cancelled).forEach((p) => {
+      const e = p.ev[0], t = M.mod(e.dep + p.d);
+      text(g, G.x(t) + (P ? 14 : 12), G.y(S[e.st].km) + (p.dir > 0 ? 32 : -16), `+${p.d}′`, { class: "lbl big", style: "fill:var(--st-org) !important" });
+    });
+  }
+
+  const steps = [
+    { title: "One hour, every hour", text: "Distance runs down, time runs across one hour. Eight train lines, intercity (teal) and regional (white), and the same hour repeats all day. Trains in both directions meet at Calden.",
+      draw(st, api) { const G = frame(st); trains(st, G, orig, { cls: api.enter(0) }); } },
+    { title: "The track is closed", text: "Calden–Dorn is handed over to the works for the whole day: a <b>possession</b>. Every line on this page runs through it, so the timetable can no longer run as planned.",
+      draw(st, api) { const G = frame(st); band(st, G, api, 1); trains(st, G, orig, { width: 0.8 }); } },
+    { title: "Turn trains short", text: "Before any optimisation, each line is split at the closure. Its trains reverse at the last station with a crossover, Calden on one side and Dorn on the other. An intercity that normally runs through Dorn now has to brake and stop there, which costs time.",
+      draw(st, api) { const G = frame(st); band(st, G, api, -1); trains(st, G, split, { cls: api.enter(2) }); turns(st, G, split, api, 2); } },
+    { title: "Too few platforms", text: "Two of Calden's three platform tracks are also closed. Now every train that turns there needs the one track left, and at the meeting times two trains want it at once (red).",
+      draw(st, api) { occChart(st, api, split, 1, 3); } },
+    { title: "Later, never earlier", text: "The solver moves trains <b>only later</b>: a train that leaves early is missed by passengers. The trains that turn at Calden back towards Amsel leave two minutes later, so each one gets the track to itself. The alternative timetable costs <b>" + solved.delayMin + " minutes</b> of arrival delay per hour in total.",
+      draw(st, api) { const G = frame(st, { plat: [4, 2, 1, 2, 4] }); band(st, G, api, -1); trains(st, G, split, { ghost: true }); trains(st, G, solved.pieces, { cls: api.enter(4) }); turns(st, G, solved.pieces, api, -1); delayTags(st, G, solved.pieces, api, 4); } },
+    { title: "The hour wraps round", text: "A train due at Amsel at :59, two minutes late, arrives at :01: still this train, just in the next hour. The paper lets delays cross the hour boundary with one extra binary variable per event. Without it, the best solution here costs <b>" + noWrap.delayMin + " minutes</b> of delay instead of " + solved.delayMin + ", and in tighter cases trains have to be cancelled.",
+      draw(st, api) {
+        const G = frame(st, { plat: [4, 2, 1, 2, 4] });
+        band(st, G, api, -1);
+        trains(st, G, solved.pieces.filter((p) => p !== wrapper), { width: 0.6 }).setAttribute("opacity", 0.35);
+        if (wrapper) {
+          trains(st, G, [wrapper], { width: 1.6, cls: api.enter(5) });
+          const y = G.y(S[0].km);
+          const g = svg("g", { class: api.enter(5) }, st);
+          svg("circle", { cx: G.x(M.mod(wrapper.ev[wrapper.ev.length - 1].arr + wrapper.d)), cy: y, r: 14, fill: "none", stroke: "var(--st-yel)", "stroke-width": 4 }, g);
+          svg("line", { x1: B.X1, x2: B.X1, y1: B.Y0 - 20, y2: B.Y1 + 10, stroke: "var(--st-yel)", "stroke-width": 3, "stroke-dasharray": "10 8" }, g);
+          text(g, B.X1 - 12, B.Y0 - 30, "end of the hour = start of the next", { class: "lbl", "text-anchor": "end", style: "fill:var(--st-yel) !important" });
+          text(g, G.x(1) + 24, y + 48, `${wrapper.id.replace(/[a-z]$/, "")}: :59 + 2′ = :01`, { class: "lbl big" });
+        }
+      } },
+    { title: "What a cancellation costs", text: "The objective adds <b>1 per second</b> of arrival delay and <b>100 000 per cancelled line</b>, as in the paper. So the solver only cancels when no delay within the limit works. Allow at most 1 minute here and " + tight.cancelled + " lines have to go.",
+      draw(st, api) {
+        const L = P ? { X0: 60, X1: 840, y: 260, gap: 230 } : { X0: 140, X1: 1460, y: 150, gap: 190 };
+        const w = (v) => (v / 100000) * (L.X1 - L.X0);
+        const rows = [
+          ["one cancelled train line", 100000, "var(--st-red)", "100 000"],
+          [`all delay in this alternative timetable (${solved.delayMin} min)`, solved.delayMin * 60, "var(--st-org)", (solved.delayMin * 60).toLocaleString("en")],
+          [`limit 1 min: ${tight.cancelled} cancellations, ${tight.delayMin} min delay`, tight.cost, "var(--st-red)", tight.cost.toLocaleString("en")],
+        ];
+        rows.forEach(([lab, v, c, num], i) => {
+          const g = svg("g", { class: api.enter(6), style: `animation-delay:${i * 0.25}s` }, st), y = L.y + i * L.gap;
+          text(g, L.X0, y - 20, lab, { class: "lbl" });
+          const ww = Math.min(w(v), L.X1 - L.X0);
+          svg("rect", { x: L.X0, y, width: Math.max(4, ww), height: P ? 54 : 60, fill: c }, g);
+          if (v > 100000) text(g, L.X1 - 20, y + (P ? 38 : 41), "× " + (v / 100000).toFixed(1), { class: "lbl big", "text-anchor": "end", style: "fill:#fff !important" });
+          const inside = v >= 100000;
+          text(g, inside ? L.X0 + 20 : L.X0 + Math.max(4, ww) + 18, y + (P ? 38 : 41), num, { class: "lbl big", style: inside ? "fill:#fff !important" : null });
+        });
+      } },
+    { title: "Real Dutch networks", text: "The paper solved five possession scenarios on each of three Dutch networks with CPLEX. The Randstad area, about a third of all Dutch train events, took at most <b>408 seconds</b>. Planners need around 14 weeks for one day by hand.",
+      draw(st, api) {
+        const rows = [["Corridor The Hague – Utrecht", 144, 8, "≤ 0.60 s"], ["Network Utrecht – Eindhoven", 152, 20, "≤ 0.33 s"], ["Randstad area", 4411, 135, "≤ 408 s"]];
+        const L = P ? { X0: 60, X1: 840, y: 250, gap: 250 } : { X0: 140, X1: 1180, y: 170, gap: 170 };
+        text(st, L.X0, L.y - 90, "timetable events in the model", { class: "lbl" });
+        if (!P) text(st, 1460, L.y - 90, "solve time", { class: "lbl", "text-anchor": "end" });
+        rows.forEach(([n, ev, lines, tm], i) => {
+          const g = svg("g", { class: api.enter(7), style: `animation-delay:${i * 0.25}s` }, st), y = L.y + i * L.gap;
+          text(g, L.X0, y - 16, `${n} · ${lines} lines`, { class: "lbl" });
+          const ww = (ev / 4411) * (L.X1 - L.X0);
+          svg("rect", { x: L.X0, y, width: Math.max(6, ww), height: 52, fill: i === 2 ? "var(--st-acc)" : "#fff" }, g);
+          text(g, L.X0 + (i === 2 ? 20 : Math.max(6, ww) + 18), y + 37, ev.toLocaleString("en"), { class: "lbl big", style: i === 2 ? "fill:var(--st-bg) !important" : null });
+          text(g, P ? L.X1 : 1460, P ? y + 110 : y + 37, tm, { class: "lbl big", "text-anchor": "end", style: "fill:var(--st-org) !important" });
+        });
+        text(st, L.X0, P ? 1000 : 700, "Figures from the paper's Tables 2 and 4 (Intel i7, 8 GB RAM).", { class: "lbl", style: "font-size:20px" });
+      } },
+  ];
+  steps.forEach((s) => { const d = s.draw; s.draw = (st, api) => { setLayout(api); d(st, api); }; });
+  VR.essay({ mount: document.getElementById("essay"), steps });
+})();
+</script>
+</body>
+</html>

@@ -14,13 +14,17 @@ content from that site is included.
 Third-party works visualized (not covered by the Apache License)
 ------------------------------------------------------------------
 Each visualization is an independent, simplified re-implementation of an idea from a
-paper published under a Creative Commons Attribution (CC BY) licence. The papers are
+paper published under a Creative Commons Attribution (CC BY) licence, or from a paper whose
+authors have permitted its use on visurail (marked below). The papers are
 cited on each page and in assets/js/entries.js. No code from the authors' repositories
 is included. In particular, TimetableNetworkTool (GPL-3.0) is linked, not copied.
 
   - Lamanna, Prisma & Medeossi (2025), PLOS ONE 20(7): e0328681, CC BY 4.0
   - Pozzobon Borin, de Souza Sant'Ana, Raheel & Mahmood (2026), arXiv:2601.16592, CC BY 4.0
   - Dobruszkes (2025), EJTIR 25(1): 160–177, CC BY 4.0
+  - Van Aken, Bešinović & Goverde (2017), Transportation Research Part B 98: 224–238,
+    doi:10.1016/j.trb.2016.12.019, © 2017 Elsevier Ltd. Used with the authors' permission;
+    the paper itself is not included or redistributed.
 
 Trademarks and fonts
 --------------------

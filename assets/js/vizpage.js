@@ -27,7 +27,7 @@
   cite.innerHTML =
     '<h2>Research reference</h2>' +
     `<div class="cite"><b>${esc(e.authors)}</b> (${esc(e.year)}). ${esc(e.title)}. <i>${esc(e.venue)}</i>.${doi} ` +
-    `Licensed <b>${esc(e.license)}</b>.</div>` +
+    (e.licenseNote ? `${esc(e.licenseNote)}</div>` : `Licensed <b>${esc(e.license)}</b>.</div>`) +
     `<div class="links">${L.map(([h, t, ic]) => `<a href="${esc(h)}">${icon(ic)} ${esc(t)}</a>`).join("")}</div>` +
     '<p class="note">This essay is an independent, simplified re-implementation of one idea of the paper and is not endorsed by its authors. ' +
     "Read the paper for the real method and results." +
