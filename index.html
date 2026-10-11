@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0A777F" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#00103a" media="(prefers-color-scheme: dark)">
+<meta name="description" content="visurail — interactive visualizations of rail science, clustered by rail domain and by rail's interfaces with other modes.">
+<title>visurail — Rail Science, Visualized</title>
+<link rel="icon" href="assets/brand/Bildmarke.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/css/visurail.css">
+</head>
+<body data-root="./" data-page="catalog">
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Prototype · Chair of Railway Operations · TU Dresden</div>
+    <h1>Rail science you can play with.</h1>
+    <p>visurail pairs open-access rail research with small interactive visualizations, so the core idea
+      of a paper can be understood in a minute — and checked against the paper itself.</p>
+    <div class="credit">Inspired by <a href="https://visualtransportationscience.org/">Visual Transportation Science</a>,
+      which pioneered this format for transportation research. visurail narrows it to rail.</div>
+    <div class="stats">
+      <div><b id="nEntries">–</b>visualizations</div>
+      <div><b id="nDomains">–</b>rail domains</div>
+      <div><b id="nIfaces">–</b>interfaces</div>
+    </div>
+  </div>
+</section>
+
+<main class="wrap">
+  <section class="sec" id="structure">
+    <h2>Rail domains</h2>
+    <p class="lead">Every work sits in one primary domain of the railway system. Pick one to filter the catalog.</p>
+    <div class="tiles" id="domainTiles"></div>
+  </section>
+
+  <section class="sec">
+    <h2>Interfaces — Rail × …</h2>
+    <p class="lead">Where rail meets other systems. A work can sit on several interfaces and on a domain at the same time.</p>
+    <div class="tiles" id="ifaceTiles"></div>
+  </section>
+
+  <section class="sec" id="catalog">
+    <h2>Catalog</h2>
+    <div class="filters">
+      <input type="search" id="q" placeholder="Search title, author, keyword…" aria-label="Search">
+      <select id="method" aria-label="Method"><option value="">All methods</option></select>
+      <span class="active-filter" id="activeFilter" aria-live="polite"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<script src="assets/js/site.js"></script>
+<script src="assets/js/taxonomy.js"></script>
+<script src="assets/js/entries.js"></script>
+<script src="assets/js/catalog.js"></script>
+</body>
+</html>

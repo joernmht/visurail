@@ -1,0 +1,33 @@
+visurail
+Copyright 2026 Chair of Railway Operations (Professur für Bahnverkehr, öffentlicher
+Stadt- und Regionalverkehr), TU Dresden
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Idea credit
+-----------
+visurail follows the format of Visual Transportation Science
+(https://visualtransportationscience.org/): pairing transportation research with
+interactive visualizations. visurail applies that format to rail science. No code or
+content from that site is included.
+
+Third-party works visualized (not covered by the Apache License)
+------------------------------------------------------------------
+Each visualization is an independent, simplified re-implementation of an idea from a
+paper published under a Creative Commons Attribution (CC BY) licence. The papers are
+cited on each page and in assets/js/entries.js. No code from the authors' repositories
+is included. In particular, TimetableNetworkTool (GPL-3.0) is linked, not copied.
+
+  - Lamanna, Prisma & Medeossi (2025), PLOS ONE 20(7): e0328681, CC BY 4.0
+  - Pozzobon Borin, de Souza Sant'Ana, Raheel & Mahmood (2026), arXiv:2601.16592, CC BY 4.0
+  - Dobruszkes (2025), EJTIR 25(1): 160–177, CC BY 4.0
+
+Trademarks and fonts
+--------------------
+The TU Dresden / Chair of Railway Operations logos and transport icons in assets/brand/
+and assets/icons/ come from the chair's corporate-design repository
+(github.com/joernmht/tud_cro_chaircd). They are trademarks and are NOT licensed under
+the Apache License; do not reuse them outside this site without permission.
+
+Noto Sans (assets/fonts/, subset) is licensed under the SIL Open Font License 1.1,
+Copyright 2015-2021 Google LLC; licence text in assets/fonts/OFL.txt.
