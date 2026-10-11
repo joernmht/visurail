@@ -24,8 +24,8 @@ is included. In particular, TimetableNetworkTool (GPL-3.0) is linked, not copied
 
 Trademarks and fonts
 --------------------
-The TU Dresden / Chair of Railway Operations logos and transport icons in assets/brand/
-and assets/icons/ come from the chair's corporate-design repository
+The TU Dresden / Chair of Railway Operations logos in assets/brand/ and the small icon
+set in assets/js/cro-icons.js come from the chair's corporate-design repository
 (github.com/joernmht/tud_cro_chaircd). They are trademarks and are NOT licensed under
 the Apache License; do not reuse them outside this site without permission.
 

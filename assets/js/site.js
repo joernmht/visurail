@@ -66,5 +66,14 @@ window.VR = {
     if (parent) parent.appendChild(el);
     return el;
   },
+  icon(name, cls) {
+    const body = (window.CRO_ICONS || {})[name] || "";
+    return `<svg class="ic${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
+  },
   esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); },
 };
+
+/* <i data-icon="name"></i> → inline CRO icon */
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("i[data-icon]").forEach((el) => { el.outerHTML = window.VR.icon(el.dataset.icon); });
+});

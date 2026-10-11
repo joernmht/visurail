@@ -26,10 +26,24 @@
 </head>
 <body data-root="../../" data-slug="timetable-network-spaces">
 <main class="wrap">
-  <div class="vhead" id="vhead"></div>
-  <div class="links" id="vlinks"></div>
-  <div id="vcite"></div>
+  <div id="vhead"></div>
+  <div id="essay"></div>
 
+  <section class="prose">
+    <div class="kicker-s">Field guide</div>
+    <h2>One timetable, three networks</h2>
+    <p>To analyse a timetable as a network, you first have to decide what counts as an edge. Lamanna, Prisma and Medeossi
+      give three answers. In the <b>stations</b> view, an edge joins neighbouring stations on a train's path, including stations it runs through.
+      In the <b>stops</b> view, it joins consecutive stops only. In the <b>changes</b> view, it joins every pair of stations you can travel between
+      without changing trains.</p>
+    <p>Each view answers a different question. The stations view shows where trains run, the stops view where they serve, and the changes view
+      where you can get to directly. Cluster each one (the paper uses <a href="https://www.mapequation.org/infomap/">Infomap</a>) and you see
+      which stations the timetable binds together. The paper uses this, with a Timetable Connectivity Index, to compare Norway's 2024 timetable with a planned 2033 one.</p>
+  </section>
+
+  <section class="deeper">
+    <h2><i data-icon="layers"></i> Go deeper: explore the model</h2>
+    <p class="note">Switch the view and the weighting, and click a station to see its neighbours.</p>
   <div class="panel">
     <div class="controls">
       <div class="seg-toggle" role="group" aria-label="Network space">
@@ -47,110 +61,26 @@
     <div class="kv" id="kv"></div>
   </div>
 
-  <div class="prose">
-    <h2>What you are looking at</h2>
-    <p>A timetable is a list of trains and the stations they serve. Turning it into a network forces a choice:
-      <b>what is an edge?</b> The paper builds three answers, each as a directed, weighted graph:</p>
-    <ul>
-      <li><b>Stations</b> — consecutive stations on a train's path, including those it runs through without stopping. This is close to the physical network.</li>
-      <li><b>Stops</b> — consecutive <i>stopping</i> points only. Express trains now create long edges that skip stations.</li>
-      <li><b>Changes</b> — every pair of stations you can travel between <i>without changing trains</i>. Each train becomes a fully connected group.</li>
-    </ul>
-    <p>Each space is weighted by the number of trains on an edge, or by the inverse of the mean travel time. Clustering the
-      graphs (the paper uses <a href="https://www.mapequation.org/infomap/">Infomap</a>) reveals which stations the timetable binds together —
-      and the clusters differ between spaces. The paper uses this, with a Timetable Connectivity Index, to compare the Norwegian 2024 timetable with a planned 2033 one.</p>
-    <p class="note"><b>Simplifications on this page:</b> the timetable is a made-up 12-station toy (below), not the Norwegian data.
-      Edges are drawn undirected, and clusters come from a small modularity heuristic (greedy local moves) rather than Infomap.
-      No code from the authors' GPL-3.0 repository is used.</p>
+    <details><summary>The toy timetable</summary><div class="scroll"><table class="tt" id="tt"></table></div></details>
+    <p class="note"><b>Simplifications:</b> a made-up 12-station toy timetable, not the Norwegian data. Edges are undirected, and clusters come
+      from a small modularity heuristic (greedy local moves) rather than Infomap. No code from the authors' GPL-3.0 repository is used.</p>
+  </section>
 
-    <h3>The toy timetable</h3>
-    <div class="scroll"><table class="tt" id="tt"></table></div>
-  </div>
+  <section class="refs prose" id="vcite"></section>
 </main>
 
+<script src="../../assets/js/cro-icons.js"></script>
 <script src="../../assets/js/site.js"></script>
 <script src="../../assets/js/taxonomy.js"></script>
 <script src="../../assets/js/entries.js"></script>
 <script src="../../assets/js/vizpage.js"></script>
+<script src="../../assets/js/essay.js"></script>
+<script src="model.js"></script>
 <script>
 (function () {
   const { svg, css, esc } = window.VR;
 
-  // ---- toy infrastructure: positions (0..100 × 0..60) and running minutes per physical link
-  const ST = {
-    A: { n: "Westport", x: 4, y: 40 }, B: { n: "Brook", x: 16, y: 40 }, C: { n: "Cliff", x: 28, y: 40 },
-    D: { n: "Dalby", x: 42, y: 40 }, E: { n: "Elm", x: 56, y: 40 }, F: { n: "Fjord", x: 70, y: 40 },
-    G: { n: "Gatehaven", x: 84, y: 40 }, H: { n: "Heath", x: 46, y: 25 }, I: { n: "Ivy", x: 52, y: 13 },
-    J: { n: "Juniper", x: 60, y: 3 }, K: { n: "Kettle", x: 90, y: 52 }, L: { n: "Lakeside", x: 97, y: 60 },
-  };
-  const RUN = { AB: 9, BC: 8, CD: 10, DE: 9, EF: 11, FG: 10, DH: 8, HI: 9, IJ: 10, GK: 7, KL: 8 };
-  const run = (a, b) => RUN[a + b] || RUN[b + a];
-
-  // trains: path through the physical network, stop flags ('*' = runs through), trains/day, express factor
-  const TRAINS = [
-    { id: "R1", path: "ABCDEFG", pass: "", f: 16, k: 1 },
-    { id: "R2", path: "DHIJ", pass: "", f: 12, k: 1 },
-    { id: "R3", path: "GKL", pass: "", f: 12, k: 1 },
-    { id: "IC1", path: "ABCDEFG", pass: "BCEF", f: 8, k: 0.8 },
-    { id: "IC2", path: "ABCDHIJ", pass: "BCHI", f: 6, k: 0.8 },
-    { id: "RE", path: "JIHDEFG", pass: "IEF", f: 8, k: 0.85 },
-  ];
-  const DWELL = 2;
-
-  // ---- build the three spaces
-  function build(space) {
-    const E = {};
-    const add = (a, b, f, t) => {
-      const key = a < b ? a + b : b + a;
-      (E[key] = E[key] || { a: key[0], b: key[1], f: 0, tsum: 0 }).f += f;
-      E[key].tsum += f * t; // frequency-weighted mean travel time
-    };
-    for (const tr of TRAINS) {
-      const p = tr.path.split("");
-      const stops = p.filter((s) => !tr.pass.includes(s));
-      // cumulative time at each station along the path
-      const tAt = { [p[0]]: 0 };
-      for (let i = 1; i < p.length; i++) tAt[p[i]] = tAt[p[i - 1]] + run(p[i - 1], p[i]) * tr.k + (tr.pass.includes(p[i - 1]) || i === 1 ? 0 : DWELL);
-      if (space === "stations") for (let i = 1; i < p.length; i++) add(p[i - 1], p[i], tr.f, tAt[p[i]] - tAt[p[i - 1]]);
-      if (space === "stops") for (let i = 1; i < stops.length; i++) add(stops[i - 1], stops[i], tr.f, tAt[stops[i]] - tAt[stops[i - 1]]);
-      if (space === "changes") for (let i = 0; i < stops.length; i++) for (let j = i + 1; j < stops.length; j++) add(stops[i], stops[j], tr.f, tAt[stops[j]] - tAt[stops[i]]);
-    }
-    return Object.values(E).map((e) => ({ ...e, t: e.tsum / e.f }));
-  }
-
-  // ---- clustering: greedy modularity, local moves until stable (stand-in for Infomap)
-  function communities(nodes, edges, wkey) {
-    const w = (e) => (wkey === "freq" ? e.f : 1 / e.t);
-    const adj = {}; nodes.forEach((n) => (adj[n] = {}));
-    let m2 = 0;
-    edges.forEach((e) => { const x = w(e); adj[e.a][e.b] = x; adj[e.b][e.a] = x; m2 += 2 * x; });
-    const k = {}; nodes.forEach((n) => (k[n] = Object.values(adj[n]).reduce((s, v) => s + v, 0)));
-    const c = {}; nodes.forEach((n, i) => (c[n] = i));
-    const tot = {}; nodes.forEach((n) => (tot[c[n]] = k[n]));
-    for (let pass = 0, moved = true; moved && pass < 50; pass++) {
-      moved = false;
-      for (const n of nodes) {
-        const old = c[n]; tot[old] -= k[n];
-        const links = {};
-        for (const [nb, x] of Object.entries(adj[n])) links[c[nb]] = (links[c[nb]] || 0) + x;
-        let best = old, bestGain = (links[old] || 0) - (tot[old] * k[n]) / m2;
-        for (const [cc, x] of Object.entries(links)) {
-          const g = x - (tot[cc] * k[n]) / m2;
-          if (g > bestGain + 1e-12) { bestGain = g; best = +cc; }
-        }
-        c[n] = best; tot[best] = (tot[best] || 0) + k[n];
-        if (best !== old) moved = true;
-      }
-    }
-    // modularity Q
-    let Q = 0;
-    for (const a of nodes) for (const b of nodes) if (c[a] === c[b]) Q += (adj[a][b] || 0) - (k[a] * k[b]) / m2;
-    // relabel 0..n by first appearance in west→east order
-    const order = {}; let next = 0;
-    nodes.slice().sort((a, b) => ST[a].x - ST[b].x).forEach((n) => { if (!(c[n] in order)) order[c[n]] = next++; });
-    nodes.forEach((n) => (c[n] = order[c[n]]));
-    return { c, Q: Q / m2, n: next };
-  }
+  const { ST, TRAINS, build, communities } = window.TTNET;
 
   const state = { space: "stations", w: "freq", sel: null };
   const W = 1000, H = 640, sx = (x) => 40 + x * 9.2, sy = (y) => 40 + y * 9.3;
@@ -226,6 +156,105 @@
     TRAINS.map((t) => `<tr><td>${t.id}</td><td>${t.f}</td><td>` + t.path.split("").map((s) =>
       t.pass.includes(s) ? `<span style="color:var(--muted)">${ST[s].n}</span>` : `<b>${ST[s].n}</b>`).join(" → ") + "</td></tr>").join("");
   draw();
+})();
+</script>
+<script>
+/* ---- the visual essay: simplest picture first, one idea per step ---- */
+(function () {
+  const { svg, mover, text } = window.VR;
+  const { ST, TRAINS, build, communities } = window.TTNET;
+  const X = (k) => 150 + ST[k].x * 13.2, Y = (k) => 150 + ST[k].y * 10.6;
+  const MAIN = "ABCDEFG", NORTH = "DHIJ", SOUTH = "GKL";
+  const pathOf = (seq) => seq.split("").map((k, i) => `${i ? "L" : "M"}${X(k)} ${Y(k)}`).join(" ");
+  const CL = ["var(--st-acc)", "var(--st-org)", "var(--st-blue)", "var(--st-yel)"];
+
+  function tracks(g, seqs, cls = "trk") { seqs.forEach((q) => svg("path", { d: pathOf(q), class: cls }, g)); }
+  function stations(g, keys, { fill, size, labels = true } = {}) {
+    keys.forEach((k) => {
+      const s = size ? size(k) : 11;
+      svg("rect", { x: X(k) - s, y: Y(k) - s, width: 2 * s, height: 2 * s, class: "stn", style: fill ? `fill:${fill(k)};stroke:${fill(k)}` : "",
+        transform: `rotate(45 ${X(k)} ${Y(k)})` }, g);
+      if (labels) text(g, X(k), Y(k) + (k === "H" || k === "I" || k === "J" ? 6 : 52), ST[k].n,
+        { class: "lbl", "text-anchor": k === "H" || k === "I" || k === "J" ? "start" : "middle", dx: k === "H" || k === "I" || k === "J" ? 26 : 0 });
+    });
+  }
+  function shuttle(g, seq, opt) {
+    const fwd = pathOf(seq), back = pathOf(seq.split("").reverse().join(""));
+    return mover(g, fwd + " " + back.replace(/^M/, "L"), { ...opt, rotateAuto: true });
+  }
+  function arcs(g, edges, colour, wmax, cls) {
+    edges.forEach((e) => {
+      const x1 = X(e.a), y1 = Y(e.a), x2 = X(e.b), y2 = Y(e.b);
+      const len = Math.hypot(x2 - x1, y2 - y1), bend = Math.min(260, len * 0.32);
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, nx = -(y2 - y1) / len, ny = (x2 - x1) / len;
+      const s = ny > 0 ? -1 : 1; // always bow upwards
+      svg("path", { d: `M${x1} ${y1} Q${mx + s * nx * bend} ${my + s * ny * bend} ${x2} ${y2}`, class: "edge " + (cls ? cls(e) : ""),
+        "stroke-width": (2 + 12 * e.f / wmax).toFixed(1), style: colour ? `stroke:${colour(e)}` : "" }, g);
+    });
+  }
+  const adjacent = (e) => TRAINS.some((t) => t.path.includes(e.a + e.b) || t.path.includes(e.b + e.a));
+
+  const steps = [
+    { title: "A railway line", text: "Seven stations on one line. Regional trains run back and forth and stop everywhere.",
+      draw(st, api) {
+        const g = api.layer("base");
+        tracks(g, [MAIN]);
+        stations(g, MAIN.split(""));
+        shuttle(g, MAIN, { dur: 16 });
+        shuttle(g, MAIN, { dur: 16, begin: -8 });
+      } },
+    { title: "Not every train is the same", text: "Branches add more lines. The <b>express</b> (orange) runs through most stations without stopping.",
+      draw(st, api) {
+        const g = api.layer("base");
+        tracks(g, [MAIN]);
+        const nb = svg("g", { class: api.enter(1) }, g); tracks(nb, [NORTH, SOUTH]);
+        stations(g, Object.keys(ST));
+        shuttle(g, MAIN, { dur: 16 });
+        shuttle(g, NORTH, { dur: 10, begin: -3 });
+        shuttle(g, SOUTH, { dur: 7 });
+        shuttle(g, MAIN, { dur: 8, color: "var(--st-org)", w: 60 });
+      } },
+    { title: "Keep only the stops", text: "Draw an edge only between consecutive <b>stops</b>. The express now links Westport straight to Dalby, and the network changes shape.",
+      draw(st, api) {
+        const g = api.layer("base");
+        tracks(g, [MAIN, NORTH, SOUTH], "trk");
+        g.setAttribute("opacity", ".35");
+        const e = build("stops"), wmax = Math.max(...e.map((x) => x.f));
+        const a = svg("g", { class: api.enter(2) }, st);
+        arcs(a, e, (x) => (adjacent(x) ? "var(--st-acc)" : "var(--st-org)"), wmax);
+        stations(svg("g", {}, st), Object.keys(ST));
+      } },
+    { title: "Everywhere without changing", text: "Now connect every pair of stations you can travel between <b>without changing trains</b>. Dalby and Gatehaven turn into hubs.",
+      draw(st, api) {
+        const e = build("changes"), wmax = Math.max(...e.map((x) => x.f));
+        const deg = {}; e.forEach((x) => { deg[x.a] = (deg[x.a] || 0) + 1; deg[x.b] = (deg[x.b] || 0) + 1; });
+        const a = svg("g", { class: api.enter(3), opacity: 0.8 }, st);
+        arcs(a, e, () => "var(--st-acc)", wmax * 1.6);
+        stations(svg("g", {}, st), Object.keys(ST), { size: (k) => 7 + deg[k] * 1.6 });
+      } },
+    { title: "The timetable's regions", text: "Cluster the stops network and four regions appear: groups of stations the timetable binds together. Lamanna et al. (2025) do this for Norway's 2024 and 2033 timetables.",
+      draw(st, api) {
+        const e = build("stops"), wmax = Math.max(...e.map((x) => x.f));
+        const cl = communities(Object.keys(ST), e, "freq");
+        arcs(svg("g", { opacity: 0.55 }, st), e, (x) => (cl.c[x.a] === cl.c[x.b] ? CL[cl.c[x.a] % 4] : "var(--st-line)"), wmax);
+        stations(svg("g", { class: api.enter(4) }, st), Object.keys(ST), { fill: (k) => CL[cl.c[k] % 4], size: () => 14 });
+      } },
+    { title: "Same timetable, three networks", text: "Stations, stops, changes: each view answers a different question. Scroll down to explore them yourself.",
+      draw(st, api) {
+        const views = [["stations", "Stations"], ["stops", "Stops"], ["changes", "Changes"]];
+        views.forEach(([sp, name], i) => {
+          const outer = svg("g", { transform: `translate(${40 + i * 510} 230) scale(0.33)` }, st);
+          const g = svg("g", { class: api.enter(5), style: `animation-delay:${i * 0.15}s` }, outer);
+          const e = build(sp), wmax = Math.max(...e.map((x) => x.f));
+          if (sp === "stations") tracks(g, [MAIN, NORTH, SOUTH], "trk on");
+          else arcs(g, e, (x) => (sp === "stops" && !adjacent(x) ? "var(--st-org)" : "var(--st-acc)"), wmax);
+          stations(g, Object.keys(ST), { labels: false, size: () => 16 });
+          text(st, 40 + i * 510 + 250, 470, name, { class: "lbl big", "text-anchor": "middle" });
+          text(st, 40 + i * 510 + 250, 510, e.length + " edges", { class: "lbl", "text-anchor": "middle" });
+        });
+      } },
+  ];
+  VR.essay({ mount: document.getElementById("essay"), steps });
 })();
 </script>
 </body>

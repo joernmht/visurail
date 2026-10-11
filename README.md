@@ -1,9 +1,12 @@
 # visurail
 
-**Interactive visualizations of rail science** — prototype for visurail.de / visurail.com.
+**Rail science as visual essays** — prototype for visurail.de / visurail.com.
 
-Each entry takes one idea from a CC BY rail paper and turns it into a small browser
-visualization, with a full citation and a link back to the paper.
+Each essay takes one idea from a CC BY rail paper and tells it in a few steps on one 16:9 stage.
+Step 1 is the simplest possible picture; each step adds one idea; the last part of the page is
+the full interactive model ("Go deeper"). The same page is the presentation: **Present** (or
+`F`) goes fullscreen, `←` `→` / PageUp PageDown / Space step through, so a presentation clicker
+works. `?present` in the URL opens straight into presenting, `#step-3` deep-links a step.
 
 **Credit:** the format follows [Visual Transportation Science](https://visualtransportationscience.org/),
 which pairs transportation research with interactive visualizations. visurail applies it to rail only.
@@ -38,8 +41,11 @@ assets/js/site.js         header/footer/theme toggle
 assets/js/taxonomy.js     domains + interfaces
 assets/js/entries.js      catalog entries (single source of metadata)
 assets/js/catalog.js      catalog renderer
-assets/js/vizpage.js      citation header for viz pages
-viz/<slug>/index.html     one page per visualization
+assets/js/vizpage.js      title block + research reference of an essay page
+assets/js/essay.js        visual-essay / presentation engine (steps on a 16:9 stage)
+assets/js/cro-icons.js    CRO small icon set (copied from tud_cro_chaircd/Icons/icons.js)
+viz/<slug>/index.html     one essay: stage steps, field guide, "go deeper" explorer, references
+viz/<slug>/model.js       the toy model shared by essay and explorer
 ```
 
 Static site, no build step. Serve locally with `python3 -m http.server` and open
@@ -47,7 +53,9 @@ http://localhost:8000. Works on GitHub Pages as-is (`.nojekyll` included).
 
 Design: corporate design of the Chair of Railway Operations, TU Dresden
 ([tud_cro_chaircd](https://github.com/joernmht/tud_cro_chaircd)): Türkis `#0A777F`, Orange `#C85000`
-accent, Noto Sans (self-hosted, no font CDN).
+accent, Noto Sans (self-hosted, no font CDN). The essay stage is always the dark TUD field
+(Dunkelblau `#001450`), so page and projected slides look the same. Icons: the CD's small set
+(24 px, miter joins, 45° cuts); regenerate there and copy `Icons/icons.js` over.
 
 ## Licence
 

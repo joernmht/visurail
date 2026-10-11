@@ -1,7 +1,7 @@
-/* visurail — common head of a visualization page: breadcrumbs, title, citation, links.
+/* visurail — frame of a visual-essay page: title block and references.
    The page sets <body data-slug="…">; metadata comes from entries.js (single source). */
 (function () {
-  const esc = window.VR.esc;
+  const { esc, icon } = window.VR;
   const root = document.body.dataset.root || "../../";
   const e = (window.VISURAIL_ENTRIES || []).find((x) => x.slug === document.body.dataset.slug);
   const T = window.VISURAIL_TAXONOMY;
@@ -11,27 +11,25 @@
   document.title = `${e.vizTitle} — visurail`;
 
   const head = document.getElementById("vhead");
+  head.className = "ehead";
   head.innerHTML =
-    `<div class="crumbs"><a href="${root}index.html">Catalog</a> › ${esc(dom ? dom.title : "")}` +
+    `<div class="crumbs"><a href="${root}index.html">${icon("arrow-left")} All essays</a></div>` +
+    `<div class="kicker">${icon(dom ? dom.icon : "operations")} Visual essay · ${esc(dom ? dom.title : "")}` +
     ifs.map((i) => ` · ${esc(i.title)}`).join("") + "</div>" +
-    `<h1>${esc(e.vizTitle)}</h1>` +
-    `<div class="authors">Based on: <i>${esc(e.title)}</i></div>`;
+    `<h1>${esc(e.vizTitle)}</h1>`;
 
   const cite = document.getElementById("vcite");
   const doi = e.doi ? ` doi:<a href="https://doi.org/${esc(e.doi)}">${esc(e.doi)}</a>` : ` <a href="${esc(e.url)}">${esc(e.url)}</a>`;
-  cite.className = "cite";
+  const L = [[e.url, "Paper", "paper"]];
+  if (e.preprint) L.push([e.preprint, "Preprint", "paper"]);
+  if (e.code) L.push([e.code.url, `Authors' code (${e.code.license})`, "code"]);
+  if (e.data && e.data.url) L.push([e.data.url, e.data.name, "data"]);
   cite.innerHTML =
-    `<b>Source.</b> ${esc(e.authors)} (${esc(e.year)}). ${esc(e.title)}. <i>${esc(e.venue)}</i>.${doi} ` +
-    `Licensed <b>${esc(e.license)}</b>. This page is an independent, simplified re-implementation of one idea of the paper; ` +
-    "it is not endorsed by the authors. Read the paper for the real method and results." +
-    (e.verify && e.verify.length ? `<br><span class="note">Prototype — metadata still to verify: ${esc(e.verify.join("; "))}.</span>` : "");
-
-  const links = document.getElementById("vlinks");
-  if (links) {
-    const L = [[e.url, "Paper"]];
-    if (e.preprint) L.push([e.preprint, "Preprint"]);
-    if (e.code) L.push([e.code.url, `Authors' code (${e.code.license})`]);
-    if (e.data && e.data.url) L.push([e.data.url, e.data.name]);
-    links.innerHTML = L.map(([h, t]) => `<a href="${esc(h)}">${esc(t)} ↗</a>`).join("");
-  }
+    '<h2>Research reference</h2>' +
+    `<div class="cite"><b>${esc(e.authors)}</b> (${esc(e.year)}). ${esc(e.title)}. <i>${esc(e.venue)}</i>.${doi} ` +
+    `Licensed <b>${esc(e.license)}</b>.</div>` +
+    `<div class="links">${L.map(([h, t, ic]) => `<a href="${esc(h)}">${icon(ic)} ${esc(t)}</a>`).join("")}</div>` +
+    '<p class="note">This essay is an independent, simplified re-implementation of one idea of the paper and is not endorsed by its authors. ' +
+    "Read the paper for the real method and results." +
+    (e.verify && e.verify.length ? ` Prototype: metadata still to verify (${esc(e.verify.join("; "))}).` : "") + "</p>";
 })();

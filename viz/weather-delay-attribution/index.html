@@ -21,10 +21,23 @@
 </head>
 <body data-root="../../" data-slug="weather-delay-attribution">
 <main class="wrap">
-  <div class="vhead" id="vhead"></div>
-  <div class="links" id="vlinks"></div>
-  <div id="vcite"></div>
+  <div id="vhead"></div>
+  <div id="essay"></div>
 
+  <section class="prose">
+    <div class="kicker-s">Field guide</div>
+    <h2>Delay travels with the train</h2>
+    <p>A train that is 12 minutes late at a station may have lost only one minute there. It brought the other eleven with it.
+      So if you want to learn how <b>weather</b> causes delay, total delay is a poor target: it mixes the weather at this
+      station with everything that happened earlier on the line.</p>
+    <p>FI-TW joins Finnish train-running records (Digitraffic) with nearby weather observations (Finnish Meteorological Institute)
+      for 2018–2024. Its baseline model predicts the <b>station-specific delay with the propagated part removed</b>. That is the
+      orange part in the essay above.</p>
+  </section>
+
+  <section class="deeper">
+    <h2><i data-icon="layers"></i> Go deeper: explore the model</h2>
+    <p class="note">Change the snow level and the timetable supplement, and click a station name to add or remove an incident.</p>
   <div class="panel">
     <div class="controls">
       <label>Snow / cold <input type="range" id="snow" min="0" max="10" value="4"> <output id="snowO"></output></label>
@@ -43,75 +56,27 @@
     <div class="readout" id="readout"></div>
   </div>
 
-  <div class="prose">
-    <h2>Why this split matters</h2>
-    <p>A train that is 12 minutes late at a station may have lost only 1 minute there. The other 11 it brought along.
-      If you want to learn how <i>weather</i> causes delay, the total delay is a poor target. It mixes the weather here
-      with everything that happened earlier.</p>
-    <p>FI-TW joins Finnish train-running records (Digitraffic) with nearby weather observations (Finnish Meteorological Institute)
-      for 2018–2024. Its baseline model predicts a <b>station-specific delay with the propagated part removed</b>. In the
-      diagram that is the orange part of each bar. The blue part is what the train inherited.</p>
-    <p>Try it. Raise the snow level and the orange parts grow everywhere. Click a station to add an incident: it creates a
-      large orange spike there, and the blue part then carries it down the line. A running-time supplement lets the train
-      win some of it back on each section.</p>
-    <p class="note"><b>Simplifications:</b> one train, eight made-up stations, a linear toy rule
-      (snow adds dwell and running time; the supplement is recovered when late). No numbers on this page come from the
-      dataset. A next version should read real train runs from FI-TW
-      (<a href="https://github.com/joernmht/visurail/issues">see issues</a>).</p>
-  </div>
+    <p class="note"><b>Simplifications:</b> one train, eight made-up stations, a linear toy rule (snow adds dwell and running time;
+      the supplement is recovered when late). No numbers on this page come from the dataset. A next version should replay real
+      train runs from FI-TW (<a href="https://github.com/joernmht/visurail/issues">see issues</a>).</p>
+  </section>
+
+  <section class="refs prose" id="vcite"></section>
 </main>
 
+<script src="../../assets/js/cro-icons.js"></script>
 <script src="../../assets/js/site.js"></script>
 <script src="../../assets/js/taxonomy.js"></script>
 <script src="../../assets/js/entries.js"></script>
 <script src="../../assets/js/vizpage.js"></script>
+<script src="../../assets/js/essay.js"></script>
+<script src="model.js"></script>
 <script>
 (function () {
   const { svg, css } = window.VR;
-  // toy line: km position, scheduled pure running minutes to next, dwell, exposure to snow (0..1)
-  const S = [
-    { n: "Aava", km: 0, run: 14, dw: 0, ex: 0.4 },
-    { n: "Borea", km: 22, run: 11, dw: 1, ex: 0.7 },
-    { n: "Corvi", km: 39, run: 16, dw: 2, ex: 1.0 },
-    { n: "Dyyni", km: 63, run: 9, dw: 1, ex: 0.5 },
-    { n: "Ervi", km: 76, run: 13, dw: 2, ex: 0.9 },
-    { n: "Fjelli", km: 95, run: 12, dw: 1, ex: 0.6 },
-    { n: "Gruva", km: 113, run: 15, dw: 2, ex: 1.0 },
-    { n: "Halla", km: 135, run: 0, dw: 0, ex: 0.3 },
-  ];
+  const { S, simulate } = window.DELAY;
   const state = { snow: 4, slack: 5, inc: new Set([3]) };
   const $ = (id) => document.getElementById(id);
-
-  function simulate() {
-    // scheduled: run * (1 + slack%) + dwell; actual: run * (1 + snow effect) + dwell + snow dwell + incident,
-    // recovering the scheduled supplement only when late.
-    const out = []; let tS = 0, tA = 0;
-    for (let i = 0; i < S.length; i++) {
-      const s = S[i];
-      let ownArr = 0;
-      if (i > 0) {
-        const p = S[i - 1];
-        const plannedRun = p.run * (1 + state.slack / 100);
-        // fastest possible run in today's weather; a late train uses it (eats the supplement),
-        // a punctual one runs to schedule.
-        const snowRun = p.run * (1 + 0.025 * state.snow * p.ex);
-        const late = tA - tS;
-        const actualRun = Math.max(snowRun, plannedRun - Math.max(0, late));
-        tS += plannedRun; tA += actualRun;
-      }
-      const arrS = tS, arrA = tA;
-      const dwS = s.dw, dwA = s.dw + (s.dw ? 0.25 * state.snow * s.ex : 0) + (state.inc.has(i) ? 8 : 0);
-      tS += dwS; tA += dwA;
-      out.push({ ...s, arrS, arrA, depS: tS, depA: tA });
-    }
-    // delay accounting at each station (departure delay)
-    out.forEach((o, i) => {
-      o.delay = o.depA - o.depS;
-      o.inherited = i === 0 ? 0 : Math.max(0, out[i - 1].delay);
-      o.own = o.delay - o.inherited; // can be negative = recovery
-    });
-    return out;
-  }
 
   const tsBox = svg("svg", { viewBox: "0 0 1000 420", role: "img", "aria-label": "Time-space diagram" }, $("ts"));
   const barBox = svg("svg", { viewBox: "0 0 1000 240", role: "img", "aria-label": "Delay per station" }, $("bars"));
@@ -119,7 +84,7 @@
   function draw() {
     $("snowO").textContent = state.snow;
     $("slackO").textContent = state.slack + " %";
-    const R = simulate();
+    const R = simulate(state);
     const tMax = Math.max(R[R.length - 1].depA, R[R.length - 1].depS) * 1.04;
     const X0 = 110, X1 = 980, Y0 = 20, Y1 = 400, kmMax = S[S.length - 1].km;
     const x = (t) => X0 + (t / tMax) * (X1 - X0), y = (km) => Y0 + (km / kmMax) * (Y1 - Y0);
@@ -170,6 +135,75 @@
   document.addEventListener("visurail:theme", draw);
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
   draw();
+})();
+</script>
+<script>
+/* ---- visual essay ---- */
+(function () {
+  const { svg, text, mover } = window.VR;
+  const { S, simulate } = window.DELAY;
+  const X0 = 250, X1 = 1500, Y0 = 70, Y1 = 590, TMAX = 130, kmMax = S[S.length - 1].km;
+  const x = (t) => X0 + (t / TMAX) * (X1 - X0), y = (km) => Y0 + (km / kmMax) * (Y1 - Y0);
+  const pathOf = (R, a, d) => R.map((r, i) => `${i ? "L" : "M"}${x(r[a]).toFixed(1)} ${y(r.km).toFixed(1)} L${x(r[d]).toFixed(1)} ${y(r.km).toFixed(1)}`).join(" ");
+
+  function frame(st, labels = true) {
+    const g = svg("g", {}, st);
+    S.forEach((s) => {
+      svg("line", { x1: X0, x2: X1, y1: y(s.km), y2: y(s.km), stroke: "var(--st-line)", "stroke-width": 1.5 }, g);
+      if (labels) text(g, X0 - 24, y(s.km) + 8, s.n, { class: "lbl", "text-anchor": "end" });
+    });
+    for (let m = 0; m <= 120; m += 30) text(g, x(m), Y1 + 44, m + " min", { class: "lbl", "text-anchor": "middle" });
+    return g;
+  }
+  function paths(st, R, api, from, { sched = true, actual = true } = {}) {
+    if (sched) svg("path", { d: pathOf(R, "arrS", "depS"), fill: "none", stroke: "var(--st-muted)", "stroke-width": 3, "stroke-dasharray": "10 9" }, st);
+    if (actual) {
+      const p = svg("path", { d: pathOf(R, "arrA", "depA"), fill: "none", stroke: "var(--st-acc)", "stroke-width": 6, "stroke-linejoin": "miter", class: api.enter(from) }, st);
+      mover(st, pathOf(R, "arrA", "depA"), { dur: 9, w: 40, h: 16 });
+      return p;
+    }
+  }
+  function bars(st, R, api, split) {
+    const bw = (X1 - X0) / R.length, dMax = 24, BY = 560, h = (v) => (v / dMax) * 440;
+    svg("line", { x1: X0, x2: X1, y1: BY, y2: BY, stroke: "var(--st-line)", "stroke-width": 2 }, st);
+    R.forEach((r, i) => {
+      const bx = X0 + i * bw + bw * 0.22, w = bw * 0.56, g = svg("g", { class: api.enter(split ? 4 : 3), style: `animation-delay:${i * 0.06}s` }, st);
+      const inh = Math.max(0, r.inherited), own = Math.max(0, r.own), tot = Math.max(0, r.delay);
+      if (!split) svg("path", { d: `M${bx} ${BY} V${BY - h(tot)} H${bx + w} V${BY} Z`, fill: "#fff" }, g);
+      else {
+        svg("rect", { x: bx, y: BY - h(inh), width: w, height: h(inh), fill: "var(--st-blue)" }, g);
+        svg("rect", { x: bx, y: BY - h(inh) - h(own), width: w, height: h(own), fill: "var(--st-org)" }, g);
+      }
+      text(g, bx + w / 2, BY + 40, r.n, { class: "lbl", "text-anchor": "middle" });
+      text(g, bx + w / 2, BY - h(tot) - 14, tot.toFixed(0) + "′", { class: "lbl big", "text-anchor": "middle" });
+    });
+    if (split) {
+      const lg = svg("g", { class: api.enter(4) }, st);
+      svg("rect", { x: X0, y: 20, width: 22, height: 22, fill: "var(--st-org)" }, lg); text(lg, X0 + 34, 39, "own delay — arose at this station", { class: "lbl" });
+      svg("rect", { x: X0 + 520, y: 20, width: 22, height: 22, fill: "var(--st-blue)" }, lg); text(lg, X0 + 554, 39, "inherited — brought along", { class: "lbl" });
+    }
+  }
+  const calm = simulate({ snow: 0, slack: 5, inc: new Set() });
+  const snowy = simulate({ snow: 7, slack: 5, inc: new Set() });
+  const fault = simulate({ snow: 7, slack: 5, inc: new Set([3]) });
+
+  const steps = [
+    { title: "A train's journey", text: "Distance runs down, time runs across. A train travels from Aava to Halla, exactly on time.",
+      draw(st, api) { frame(st); paths(st, calm, api, -1, { sched: false }); } },
+    { title: "Snow", text: "In snow every section and every stop takes a little longer. The train drifts behind its schedule (dashed).",
+      draw(st, api) { frame(st); paths(st, snowy, api, 1); } },
+    { title: "An incident", text: "At Dyyni a door fault costs eight minutes. Every station after it sees a late train.",
+      draw(st, api) {
+        frame(st); paths(st, fault, api, 2);
+        const r = fault[3];
+        svg("rect", { x: x(r.depA) - 14, y: y(r.km) - 14, width: 28, height: 28, fill: "var(--st-red)", transform: `rotate(45 ${x(r.depA)} ${y(r.km)})`, class: api.enter(2) }, st);
+      } },
+    { title: "What the stations record", text: "Each station logs the delay of the departing train. From Dyyni on, every number is large.",
+      draw(st, api) { bars(st, fault, api, false); } },
+    { title: "Own delay vs. inherited delay", text: "Most of that delay was <b>inherited</b>. Only the orange part arose at the station itself. FI-TW's baseline model predicts this part, and that is the part weather can explain.",
+      draw(st, api) { bars(st, fault, api, true); } },
+  ];
+  VR.essay({ mount: document.getElementById("essay"), steps });
 })();
 </script>
 </body>

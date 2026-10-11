@@ -192,3 +192,131 @@ footer.site a{color:var(--muted)}
   .grid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+
+/* ======================================================================
+   Icons (CRO small set, currentColor)
+   ====================================================================== */
+svg.ic{width:1.25em;height:1.25em;display:inline-block;vertical-align:-.25em;flex:none}
+
+/* ======================================================================
+   Visual essay — one 16:9 stage, step by step; doubles as presentation.
+   The stage is always the dark TUD field (Dunkelblau), in both themes,
+   so a page and its projected slides look identical.
+   ====================================================================== */
+.essay{--st-bg:#001450;--st-bg2:#00103a;--st-ink:#ffffff;--st-muted:#a6b8da;--st-line:#2a4a92;
+  --st-acc:#36b8bf;--st-org:#f0922e;--st-red:#ff667e;--st-yel:#FFC700;--st-blue:#7aa2ff;
+  margin:18px 0 8px}
+.essay .stage-wrap{background:radial-gradient(120% 90% at 70% 20%,#00206b 0%,var(--st-bg) 45%,var(--st-bg2) 100%);
+  border-radius:18px;overflow:hidden;box-shadow:0 10px 40px rgba(0,20,80,.25);color:var(--st-ink);position:relative}
+.essay .stage{aspect-ratio:16/9;cursor:pointer}
+.essay .stage svg{display:block;width:100%;height:100%}
+.essay .stage text{fill:var(--st-ink);font-family:"Noto Sans",sans-serif}
+.essay .cap{padding:6px 28px 26px;max-width:72ch}
+.essay .kick{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--st-acc);font-weight:500}
+.essay .ct{font-size:clamp(20px,2.6vw,30px);margin:6px 0 6px;color:#fff}
+.essay .cx{margin:0;color:var(--st-muted);font-size:clamp(15px,1.5vw,18px)}
+.essay .cx b{color:#fff;font-weight:500}
+.essay .ebar{display:flex;align-items:center;gap:10px;margin-top:12px}
+.essay .dots{display:flex;gap:6px;flex:1;justify-content:center}
+.essay .dots button{width:26px;height:6px;border:0;padding:0;border-radius:0;background:var(--line);cursor:pointer;
+  clip-path:polygon(3px 0,100% 0,calc(100% - 3px) 100%,0 100%)}
+.essay .dots button[aria-selected="true"]{background:var(--accent);width:40px}
+.ebtn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+  height:40px;min-width:40px;justify-content:center;padding:0 10px;font:inherit;font-size:14px;cursor:pointer;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.ebtn:disabled{opacity:.35;cursor:default}
+.ebtn.next:not(:disabled){background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ebtn.present{margin-left:4px}
+@media (max-width:560px){.ebtn.present span{display:none}.essay .cap{padding:4px 16px 18px}}
+
+/* stage marks */
+.essay .trk{stroke:var(--st-line);stroke-width:6;fill:none;stroke-linecap:square}
+.essay .trk.on{stroke:#5a7bc0}
+.essay .stn{fill:var(--st-bg);stroke:#fff;stroke-width:4}
+.essay .stn.hub{fill:#fff}
+.essay .lbl{fill:var(--st-muted) !important;font-size:24px}
+.essay .lbl.big{fill:#fff !important;font-size:30px;font-weight:500}
+.essay .edge{fill:none;stroke:var(--st-acc);stroke-linecap:round;opacity:.85}
+.essay .edge.org{stroke:var(--st-org)}
+.essay .enter{animation:enter .7s cubic-bezier(.2,.8,.2,1) both}
+.essay .draw{stroke-dasharray:var(--len,2000);stroke-dashoffset:var(--len,2000);animation:draw 1.2s ease-out forwards}
+@keyframes enter{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* presenting: stage fills the screen, caption overlays bottom-left */
+.essay.presenting{position:fixed;inset:0;z-index:100;margin:0;background:var(--st-bg2);display:flex;flex-direction:column;justify-content:center}
+.essay.presenting .stage-wrap{border-radius:0;box-shadow:none;height:100vh;display:flex;flex-direction:column;justify-content:center}
+.essay.presenting .stage{max-height:100vh;width:min(100vw,177.8vh);margin:0 auto}
+.essay.presenting .cap{position:absolute;left:4vw;bottom:5vh;max-width:46vw;padding:18px 22px;
+  background:rgba(0,16,58,.82);backdrop-filter:blur(6px);border-left:4px solid var(--st-org)}
+.essay.presenting .ct{font-size:clamp(24px,2.6vw,44px)}
+.essay.presenting .cx{font-size:clamp(16px,1.4vw,24px)}
+.essay.presenting .ebar{position:absolute;right:3vw;top:3vh;margin:0;opacity:.7}
+.essay.presenting .ebar:hover{opacity:1}
+.essay.presenting .kick{font-size:clamp(12px,1vw,16px)}
+.essay.presenting .dots{display:none}
+html.is-presenting{overflow:hidden}
+
+/* essay page frame */
+.ehead{padding:18px 0 0}
+.ehead .kicker{display:flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:500}
+.ehead h1{font-size:clamp(30px,5vw,52px);margin:8px 0 2px;letter-spacing:-.02em}
+.deeper{margin-top:40px;border-top:1px solid var(--line);padding-top:22px}
+.deeper > h2{display:flex;align-items:center;gap:10px;font-size:24px;margin:0 0 4px}
+.refs{font-size:14px}
+.refs ol{padding-left:20px}
+.kicker-s{font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:500;margin-top:34px}
+.prose .kicker-s + h2{margin-top:6px;font-size:clamp(24px,3.4vw,34px)}
+details summary{cursor:pointer;color:var(--accent);margin:10px 0}
+
+/* ======================================================================
+   Landing (v2): dark hero with moving trains, featured essay, icon tiles
+   ====================================================================== */
+.hero.dark{position:relative;overflow:hidden;background:radial-gradient(120% 120% at 80% 0%,#00206b 0%,#001450 45%,#00103a 100%);
+  padding:64px 0 150px}
+.hero.dark h1{font-size:clamp(36px,7vw,76px);line-height:1.02;letter-spacing:-.03em;max-width:none;margin:12px 0 18px}
+.hero.dark h1 span{color:#36b8bf}
+.hero.dark p{font-size:clamp(16px,2vw,20px);color:#c9d6f0;opacity:1}
+.hero .eyebrow{color:#36b8bf;opacity:1}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.hero .stats{border-top:1px solid rgba(255,255,255,.15);padding-top:18px;margin-top:30px;max-width:520px}
+.hero .stats div{color:#a6b8da}
+.hero-tracks{position:absolute;left:0;right:0;bottom:0;width:100%;height:150px}
+.hero-tracks .ht{fill:none;stroke:#2a4a92;stroke-width:4}
+.hero-tracks .htrain{fill:#36b8bf}
+.hero-tracks .htrain.o{fill:#f0922e}
+.btn.big{display:inline-flex;align-items:center;gap:10px;font-size:16px;padding:12px 20px;text-decoration:none;border-radius:0;
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.hero .btn.big{background:#36b8bf;border-color:#36b8bf;color:#001450}
+.hero .btn.big.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.35)}
+
+.sec > h2{font-size:clamp(24px,3.4vw,34px);margin:6px 0 6px;letter-spacing:-.015em}
+
+.entry{border-radius:0;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%)}
+.entry .thumb{position:relative;background:radial-gradient(120% 120% at 80% 0%,#00206b 0%,#001450 55%,#00103a 100%);border-bottom:0}
+.entry .play{position:absolute;right:14px;bottom:12px;width:40px;height:40px;display:grid;place-items:center;background:#36b8bf;color:#001450;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);transition:transform .15s}
+.entry:hover .play{transform:scale(1.08)}
+.entry .ek{display:flex;align-items:center;gap:6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:500}
+.entry .et{font-size:19px;letter-spacing:-.01em}
+.entry .ea{margin-top:auto;padding-top:8px}
+.featured .entry.big{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+.featured .entry.big .thumb{aspect-ratio:16/9}
+.featured .entry.big .body{padding:26px;justify-content:center}
+.featured .entry.big .et{font-size:clamp(22px,3vw,32px);line-height:1.15}
+.featured .entry.big .es{font-size:16px}
+@media (max-width:760px){.featured .entry.big{grid-template-columns:1fr}}
+
+.tiles{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.tile{min-height:0;padding:14px;border-top:0;border-left:4px solid var(--accent);border-radius:0;gap:6px;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%)}
+.tile.iface{border-left-color:var(--orange)}
+.tile .tic{display:flex;align-items:center;gap:6px;color:var(--accent);font-size:20px;height:28px}
+.tile.iface .tic{color:var(--orange)}
+.tile .tic .x{font-size:14px;color:var(--muted)}
+.tile[aria-pressed="true"] .tic{color:var(--accent-ink)}
+.tile .tt{font-size:15px;line-height:1.25}
+.tile .tn{margin-top:2px}
+.tile.empty{opacity:.55}
+.tile.iface{border-top-color:transparent}
+@media (max-width:700px){.essay .lbl{font-size:36px}.essay .lbl.big{font-size:42px}}
