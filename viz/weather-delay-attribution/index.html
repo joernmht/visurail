@@ -142,7 +142,9 @@
 (function () {
   const { svg, text, mover } = window.VR;
   const { S, simulate } = window.DELAY;
-  const X0 = 250, X1 = 1500, Y0 = 70, Y1 = 590, TMAX = 130, kmMax = S[S.length - 1].km;
+  let P = false, X0 = 250, X1 = 1500, Y0 = 70, Y1 = 590;
+  const TMAX = 130, kmMax = S[S.length - 1].km;
+  const setLayout = (api) => { P = api.portrait; [X0, X1, Y0, Y1] = P ? [170, 870, 60, 900] : [250, 1500, 70, 590]; };
   const x = (t) => X0 + (t / TMAX) * (X1 - X0), y = (km) => Y0 + (km / kmMax) * (Y1 - Y0);
   const pathOf = (R, a, d) => R.map((r, i) => `${i ? "L" : "M"}${x(r[a]).toFixed(1)} ${y(r.km).toFixed(1)} L${x(r[d]).toFixed(1)} ${y(r.km).toFixed(1)}`).join(" ");
 
@@ -152,7 +154,7 @@
       svg("line", { x1: X0, x2: X1, y1: y(s.km), y2: y(s.km), stroke: "var(--st-line)", "stroke-width": 1.5 }, g);
       if (labels) text(g, X0 - 24, y(s.km) + 8, s.n, { class: "lbl", "text-anchor": "end" });
     });
-    for (let m = 0; m <= 120; m += 30) text(g, x(m), Y1 + 44, m + " min", { class: "lbl", "text-anchor": "middle" });
+    for (let m = 0; m <= 120; m += P ? 60 : 30) text(g, x(m), Y1 + 44, m + " min", { class: "lbl", "text-anchor": "middle" });
     return g;
   }
   function paths(st, R, api, from, { sched = true, actual = true } = {}) {
@@ -163,7 +165,28 @@
       return p;
     }
   }
+  function hbars(st, R, api, split) {
+    // portrait: one row per station, bars grow to the right (same rows as the diagram)
+    const rh = (Y1 - Y0) / R.length, dMax = 26, w = (v) => (v / dMax) * (X1 - X0 - 80);
+    R.forEach((r, i) => {
+      const yy = Y0 + i * rh + rh * 0.2, hh = rh * 0.6, g = svg("g", { class: api.enter(split ? 4 : 3), style: `animation-delay:${i * 0.05}s` }, st);
+      const inh = Math.max(0, r.inherited), own = Math.max(0, r.own), tot = Math.max(0, r.delay);
+      text(g, X0 - 20, yy + hh * 0.7, r.n, { class: "lbl", "text-anchor": "end" });
+      if (!split) svg("rect", { x: X0, y: yy, width: w(tot), height: hh, fill: "#fff" }, g);
+      else {
+        svg("rect", { x: X0, y: yy, width: w(inh), height: hh, fill: "var(--st-blue)" }, g);
+        svg("rect", { x: X0 + w(inh), y: yy, width: w(own), height: hh, fill: "var(--st-org)" }, g);
+      }
+      text(g, X0 + w(tot) + 14, yy + hh * 0.72, tot.toFixed(0) + "′", { class: "lbl big" });
+    });
+    if (split) {
+      const lg = svg("g", { class: api.enter(4) }, st);
+      svg("rect", { x: X0, y: 960, width: 26, height: 26, fill: "var(--st-org)" }, lg); text(lg, X0 + 40, 983, "own delay", { class: "lbl" });
+      svg("rect", { x: X0 + 300, y: 960, width: 26, height: 26, fill: "var(--st-blue)" }, lg); text(lg, X0 + 340, 983, "inherited", { class: "lbl" });
+    }
+  }
   function bars(st, R, api, split) {
+    if (P) return hbars(st, R, api, split);
     const bw = (X1 - X0) / R.length, dMax = 24, BY = 560, h = (v) => (v / dMax) * 440;
     svg("line", { x1: X0, x2: X1, y1: BY, y2: BY, stroke: "var(--st-line)", "stroke-width": 2 }, st);
     R.forEach((r, i) => {
@@ -203,6 +226,7 @@
     { title: "Own delay vs. inherited delay", text: "Most of that delay was <b>inherited</b>. Only the orange part arose at the station itself. FI-TW's baseline model predicts this part, and that is the part weather can explain.",
       draw(st, api) { bars(st, fault, api, true); } },
   ];
+  steps.forEach((s) => { const d = s.draw; s.draw = (st, api) => { setLayout(api); d(st, api); }; });
   VR.essay({ mount: document.getElementById("essay"), steps });
 })();
 </script>

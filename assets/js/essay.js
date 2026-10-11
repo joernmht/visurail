@@ -9,13 +9,18 @@
    })
    api.layer(name)   → <g> (cleared each step)
    api.enter(from)   → "enter" if this is step `from` reached by stepping forward (CSS fades it in)
-   api.W, api.H      → stage size (1600 × 900)
+   api.W, api.H      → stage size: 1600 × 900 (landscape) or 900 × 1120 (portrait)
+   api.portrait      → true on phones held upright: draw the mobile layout
+   Mobile first: on a portrait phone the stage is portrait and every essay draws a layout
+   for it; desktop, tablets, landscape phones and projectors get the 16:9 layout.
+   Touch: swipe left/right to step, tap the stage for the next step.
 */
 (function () {
   const { svg, esc } = window.VR;
 
   window.VR.essay = function ({ mount, steps, onStep }) {
-    const W = 1600, H = 900;
+    const mq = window.matchMedia("(max-width: 700px) and (orientation: portrait)");
+    let W = 1600, H = 900, portrait = false;
     mount.classList.add("essay");
     mount.innerHTML =
       '<div class="stage-wrap"><div class="stage" role="img"></div>' +
@@ -27,7 +32,14 @@
       `<button type="button" class="ebtn present" aria-label="Present fullscreen">${VR.icon("present")}<span>Present</span></button>` +
       "</div>";
     const stageEl = mount.querySelector(".stage");
-    const stage = svg("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "xMidYMid meet" }, stageEl);
+    const stage = svg("svg", { preserveAspectRatio: "xMidYMid meet" }, stageEl);
+    function layout() {
+      portrait = mq.matches;
+      [W, H] = portrait ? [900, 1120] : [1600, 900];
+      stage.setAttribute("viewBox", `0 0 ${W} ${H}`);
+      mount.classList.toggle("portrait", portrait);
+    }
+    layout();
     const dots = mount.querySelector(".dots");
     steps.forEach((s, i) => {
       const b = document.createElement("button");
@@ -43,7 +55,7 @@
       stage.innerHTML = "";
       const layers = {};
       const api = {
-        W, H, step: i, forward: i > prev,
+        W, H, portrait, step: i, forward: i > prev,
         layer(name) { return layers[name] || (layers[name] = svg("g", { class: "ly-" + name }, stage)); },
         // class for elements that first appear at step `from`: they animate in when stepping forward
         enter(from) { return from === i && i > prev ? "enter" : ""; },
@@ -62,7 +74,16 @@
 
     mount.querySelector(".prev").addEventListener("click", () => go(cur - 1));
     mount.querySelector(".next").addEventListener("click", () => go(cur + 1));
-    stageEl.addEventListener("click", () => go(cur + 1));
+    stageEl.addEventListener("click", () => { if (!swiped) go(cur + 1); swiped = false; });
+    // swipe left/right on touch screens
+    let x0 = null, y0 = null, swiped = false;
+    stageEl.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    stageEl.addEventListener("touchend", (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > 1.5 * Math.abs(dy)) { swiped = true; go(cur + (dx < 0 ? 1 : -1)); }
+      x0 = null;
+    }, { passive: true });
     mount.querySelector(".present").addEventListener("click", () => toggle());
 
     function toggle(on) {
@@ -90,6 +111,7 @@
     if (/[?&]present/.test(location.search)) toggle(true);
     const redraw = () => { const i = cur; cur = -2; prev = -2; go(i); };
     document.addEventListener("visurail:theme", redraw);
+    mq.addEventListener("change", () => { layout(); redraw(); });
     return { go, redraw, get step() { return cur; } };
   };
 

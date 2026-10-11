@@ -163,7 +163,10 @@
 (function () {
   const { svg, mover, text } = window.VR;
   const { ST, TRAINS, build, communities } = window.TTNET;
-  const X = (k) => 150 + ST[k].x * 13.2, Y = (k) => 150 + ST[k].y * 10.6;
+  let P = false; // portrait (phone) layout: the main line runs top to bottom
+  const X = (k) => (P ? 470 + (ST[k].y - 40) * 9 : 150 + ST[k].x * 13.2);
+  const Y = (k) => (P ? 70 + ST[k].x * 10.2 : 150 + ST[k].y * 10.6);
+  const BR = (k) => k === "H" || k === "I" || k === "J";
   const MAIN = "ABCDEFG", NORTH = "DHIJ", SOUTH = "GKL";
   const pathOf = (seq) => seq.split("").map((k, i) => `${i ? "L" : "M"}${X(k)} ${Y(k)}`).join(" ");
   const CL = ["var(--st-acc)", "var(--st-org)", "var(--st-blue)", "var(--st-yel)"];
@@ -174,8 +177,10 @@
       const s = size ? size(k) : 11;
       svg("rect", { x: X(k) - s, y: Y(k) - s, width: 2 * s, height: 2 * s, class: "stn", style: fill ? `fill:${fill(k)};stroke:${fill(k)}` : "",
         transform: `rotate(45 ${X(k)} ${Y(k)})` }, g);
-      if (labels) text(g, X(k), Y(k) + (k === "H" || k === "I" || k === "J" ? 6 : 52), ST[k].n,
-        { class: "lbl", "text-anchor": k === "H" || k === "I" || k === "J" ? "start" : "middle", dx: k === "H" || k === "I" || k === "J" ? 26 : 0 });
+      if (labels) {
+        const side = P || BR(k);
+        text(g, X(k) + (side ? 28 : 0), Y(k) + (side ? 10 : 52), ST[k].n, { class: "lbl", "text-anchor": side ? "start" : "middle" });
+      }
     });
   }
   function shuttle(g, seq, opt) {
@@ -187,7 +192,8 @@
       const x1 = X(e.a), y1 = Y(e.a), x2 = X(e.b), y2 = Y(e.b);
       const len = Math.hypot(x2 - x1, y2 - y1), bend = Math.min(260, len * 0.32);
       const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, nx = -(y2 - y1) / len, ny = (x2 - x1) / len;
-      const s = ny > 0 ? -1 : 1; // always bow upwards
+      // bow away from the labels: upwards on landscape, to the left on portrait
+      const s = (P ? nx : ny) > 0 ? -1 : 1;
       svg("path", { d: `M${x1} ${y1} Q${mx + s * nx * bend} ${my + s * ny * bend} ${x2} ${y2}`, class: "edge " + (cls ? cls(e) : ""),
         "stroke-width": (2 + 12 * e.f / wmax).toFixed(1), style: colour ? `stroke:${colour(e)}` : "" }, g);
     });
@@ -243,17 +249,20 @@
       draw(st, api) {
         const views = [["stations", "Stations"], ["stops", "Stops"], ["changes", "Changes"]];
         views.forEach(([sp, name], i) => {
-          const outer = svg("g", { transform: `translate(${40 + i * 510} 230) scale(0.33)` }, st);
+          const ox = P ? 10 + i * 295 : 40 + i * 510, oy = P ? 260 : 230, sc = P ? 0.31 : 0.33;
+          const outer = svg("g", { transform: `translate(${ox} ${oy}) scale(${sc})` }, st);
           const g = svg("g", { class: api.enter(5), style: `animation-delay:${i * 0.15}s` }, outer);
           const e = build(sp), wmax = Math.max(...e.map((x) => x.f));
           if (sp === "stations") tracks(g, [MAIN, NORTH, SOUTH], "trk on");
           else arcs(g, e, (x) => (sp === "stops" && !adjacent(x) ? "var(--st-org)" : "var(--st-acc)"), wmax);
           stations(g, Object.keys(ST), { labels: false, size: () => 16 });
-          text(st, 40 + i * 510 + 250, 470, name, { class: "lbl big", "text-anchor": "middle" });
-          text(st, 40 + i * 510 + 250, 510, e.length + " edges", { class: "lbl", "text-anchor": "middle" });
+          const cx = P ? ox + 140 : ox + 250, ty = P ? 700 : 470;
+          text(st, cx, ty, name, { class: "lbl big", "text-anchor": "middle" });
+          text(st, cx, ty + 44, e.length + " edges", { class: "lbl", "text-anchor": "middle" });
         });
       } },
   ];
+  steps.forEach((s) => { const d = s.draw; s.draw = (st, api) => { P = api.portrait; d(st, api); }; });
   VR.essay({ mount: document.getElementById("essay"), steps });
 })();
 </script>

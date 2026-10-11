@@ -8,6 +8,10 @@ the full interactive model ("Go deeper"). The same page is the presentation: **P
 `F`) goes fullscreen, `←` `→` / PageUp PageDown / Space step through, so a presentation clicker
 works. `?present` in the URL opens straight into presenting, `#step-3` deep-links a step.
 
+**Mobile first.** On a phone held upright every essay draws a portrait layout (900 × 1120 stage;
+the line runs top to bottom, bars become rows), you swipe or tap to step, and the explorers scale
+their labels up. Desktop, tablets, landscape phones and projectors get the 16:9 layout.
+
 **Credit:** the format follows [Visual Transportation Science](https://visualtransportationscience.org/),
 which pairs transportation research with interactive visualizations. visurail applies it to rail only.
 

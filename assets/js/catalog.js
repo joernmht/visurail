@@ -83,7 +83,10 @@
     });
     const grid = document.getElementById("grid");
     grid.innerHTML = "";
-    const list = E.filter(matches);
+    const filtered = state.domain || state.iface;
+    // the featured essay is already shown above; repeat it only inside a filtered view
+    const list = E.filter(matches).filter((e, i) => filtered || e !== E[0]);
+    document.getElementById("moreTitle").textContent = filtered ? "Essays" : "More essays";
     list.forEach((e) => grid.appendChild(card(e)));
     if (!list.length) grid.innerHTML = '<div class="empty-msg">Nothing here yet. This cluster is open for contributions: ' +
       `<a href="${root}contribute.html">add an essay</a>.</div>`;

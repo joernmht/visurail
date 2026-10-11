@@ -319,4 +319,39 @@ details summary{cursor:pointer;color:var(--accent);margin:10px 0}
 .tile .tn{margin-top:2px}
 .tile.empty{opacity:.55}
 .tile.iface{border-top-color:transparent}
-@media (max-width:700px){.essay .lbl{font-size:36px}.essay .lbl.big{font-size:42px}}
+
+/* ======================================================================
+   Mobile first: portrait stage on phones, sticky step bar, big tap targets
+   ====================================================================== */
+.essay.portrait .stage{aspect-ratio:900/1120}
+.essay.portrait .lbl{font-size:30px}
+.essay.portrait .lbl.big{font-size:38px}
+.essay .stage{touch-action:pan-y}
+@media (max-width:700px){
+  .essay{margin:12px -16px 8px}
+  .essay .stage-wrap{border-radius:0}
+  .essay .ebar{padding:8px 16px 0;margin-top:0}
+  .ebtn{height:46px;min-width:52px}
+  .essay .dots button{width:16px}
+  .essay .dots button[aria-selected="true"]{width:28px}
+  .ehead h1{font-size:30px}
+  .hero.dark{padding:40px 0 120px}
+  .hero-tracks{height:110px}
+  .nav a[href$="#structure"]{display:none}
+  .nav{gap:0}
+  .nav a{padding:6px 8px}
+  .featured .entry.big .body{padding:16px}
+  .controls{gap:12px}
+  .controls label{width:100%;justify-content:space-between}
+  .controls input[type=range]{flex:1;width:auto;max-width:none}
+  .seg-toggle{width:100%}
+  .seg-toggle button{flex:1;padding:10px 6px}
+  .panel{padding:12px;margin-left:-4px;margin-right:-4px}
+  /* explorer diagrams: readable labels on a narrow screen */
+  .viz .node text{font-size:30px}
+  #ts .lbl,#bars .lbl{font-size:30px}
+  #map .lbl{font-size:18px}
+}
+.essay.presenting.portrait .cap{position:static;max-width:none;background:none;border-left:0;padding:14px 20px}
+.essay.presenting.portrait .stage-wrap{height:100vh;justify-content:center}
+.essay.presenting.portrait .stage{width:100vw;max-height:72vh}

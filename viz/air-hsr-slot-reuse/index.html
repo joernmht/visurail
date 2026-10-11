@@ -166,9 +166,16 @@
 /* ---- visual essay (toy numbers: 40 feeders of ~170 km, 80 % of slots reused at 1,200 km) ---- */
 (function () {
   const { svg, text, mover } = window.VR;
-  const HX = 800, HY = 400;
-  const FEED = [[-250, -150, "Feeder A"], [270, -120, "Feeder B"], [230, 180, "Feeder C"], [-210, 190, "Feeder D"]];
-  const LONG = [[-650, -300], [-680, -40], [-560, 280], [620, -320], [690, -60], [600, 300], [-200, -360], [180, -370]];
+  let HX = 800, HY = 400, FEED, LONG, P = false;
+  const FEED0 = [[-250, -150, "Feeder A"], [270, -120, "Feeder B"], [230, 180, "Feeder C"], [-210, 190, "Feeder D"]];
+  const LONG0 = [[-650, -300], [-680, -40], [-560, 280], [620, -320], [690, -60], [600, 300], [-200, -360], [180, -370]];
+  // portrait (phone): squeeze horizontally, stretch vertically
+  const setLayout = (api) => {
+    P = api.portrait; [HX, HY] = P ? [450, 470] : [800, 400];
+    const kx = P ? 0.62 : 1, ky = P ? 1.2 : 1;
+    FEED = FEED0.map(([dx, dy, n]) => [dx * (P ? 0.9 : 1), dy * (P ? 1.4 : 1), n]);
+    LONG = LONG0.map(([dx, dy]) => [dx * kx, dy * ky]);
+  };
   const plane = (parent, d, dur, begin = 0) => {
     const g = svg("g", {}, parent);
     const inner = svg("g", { transform: "rotate(90) scale(2.2) translate(-12 -12)", style: "color:#fff" }, g);
@@ -197,8 +204,9 @@
   }
   function slots(st, n, api, from) {
     const g = svg("g", { class: api.enter(from) }, st);
-    for (let i = 0; i < n; i++) svg("rect", { x: HX + 120 + (i % 4) * 34, y: HY - 22 + Math.floor(i / 4) * 34, width: 26, height: 26, fill: "var(--st-org)" }, g);
-    text(g, HX + 120, HY + 80, "freed runway slots", { class: "lbl" });
+    const sx = P ? HX - 70 : HX + 120, sy = P ? HY + 120 : HY - 22;
+    for (let i = 0; i < n; i++) svg("rect", { x: sx + (i % 4) * 34, y: sy + Math.floor(i / 4) * 34, width: 26, height: 26, fill: "var(--st-org)" }, g);
+    text(g, P ? HX : sx, sy + (P ? 112 : 102), "freed runway slots", { class: "lbl", "text-anchor": P ? "middle" : "start" });
   }
   const before = 176, after = 514;
   const steps = [
@@ -220,16 +228,21 @@
       } },
     { title: "The balance can tip", text: "In this toy example the longer flights emit almost three times what the feeders did. Dobruszkes (2025) finds the same direction at Frankfurt: integration alone did not cut aviation's climate impact.",
       draw(st, api) {
-        const g = svg("g", { class: api.enter(4) }, st), mx = 560, X = 420, w = (v) => (v / mx) * 900;
+        const g = svg("g", { class: api.enter(4) }, st), mx = 560, X = P ? 60 : 420, w = (v) => (v / mx) * (P ? 700 : 900);
         [["before", before, "var(--st-muted)"], ["after", after, "var(--st-org)"]].forEach(([t, v, c], i) => {
-          const y = 170 + i * 170;
-          text(g, X - 30, y + 70, t, { class: "lbl big", "text-anchor": "end" });
+          const y = P ? 200 + i * 260 : 170 + i * 170;
+          if (P) text(g, X, y - 22, `${t}: ${v} t CO₂ / day`, { class: "lbl big" });
+          else {
+            text(g, X - 30, y + 70, t, { class: "lbl big", "text-anchor": "end" });
+            text(g, X + w(v) + 50, y + 62, `${v} t CO₂ / day`, { class: "lbl big" });
+          }
           svg("path", { d: `M${X} ${y} H${X + w(v)} L${X + w(v) + 30} ${y + 50} L${X + w(v)} ${y + 100} H${X} Z`, fill: c }, g);
-          text(g, X + w(v) + 50, y + 62, `${v} t CO₂ / day`, { class: "lbl big" });
         });
-        text(g, X, 520, "toy numbers: 40 feeder flights moved, 80 % of slots reused for 1,200 km flights", { class: "lbl" });
+        if (P) { text(g, X, 780, "toy numbers: 40 feeder flights moved,", { class: "lbl" }); text(g, X, 820, "80 % of slots reused for 1,200 km flights", { class: "lbl" }); }
+        else text(g, X, 520, "toy numbers: 40 feeder flights moved, 80 % of slots reused for 1,200 km flights", { class: "lbl" });
       } },
   ];
+  steps.forEach((s) => { const d = s.draw; s.draw = (st, api) => { setLayout(api); d(st, api); }; });
   VR.essay({ mount: document.getElementById("essay"), steps });
 })();
 </script>
