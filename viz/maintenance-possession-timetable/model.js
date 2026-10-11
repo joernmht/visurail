@@ -34,12 +34,14 @@
   const mod = (t) => ((t % T) + T) % T;
 
   // original timetable: one event row per station on the route {st, arr, dep, stop}
-  function original() {
-    return LINES.map((L) => {
+  // a line may carry its own stop list (station indices); otherwise it stops as its type does
+  const stopsOf = (L) => L.stops || STOPS[L.type];
+  function original(lines = LINES) {
+    return lines.map((L) => {
       const order = L.dir > 0 ? [0, 1, 2, 3, 4] : [4, 3, 2, 1, 0];
       const ev = []; let t = L.t0;
       order.forEach((st, k) => {
-        const stop = STOPS[L.type].includes(st);
+        const stop = k === 0 || k === order.length - 1 || stopsOf(L).includes(st);
         const first = k === 0, last = k === order.length - 1;
         const arr = first ? null : t;
         if (!first && stop && !last) t += 1;
@@ -97,9 +99,9 @@
      tracks per station (count of trains present ≤ tracks), headway H between same-direction trains on a
      section, no overtaking on open track. Periodic: if `wrap` is off, no event may be pushed past minute 60
      (the paper needs an extra binary per event to allow that). */
-  function solve({ closed = new Set(), plat = S.map((s) => s.plat), dmax = 8, wrap = true } = {}) {
+  function solve({ lines = LINES, closed = new Set(), plat = S.map((s) => s.plat), dmax = 8, wrap = true } = {}) {
     const t0 = performance.now();
-    const { pieces, cut } = shortTurn(original(), closed);
+    const { pieces, cut } = shortTurn(original(lines), closed);
     const SL = 2 * T, cnt = S.map(() => new Int8Array(SL));
     const secs = new Map(); // "sec:dir" → [{dep, arr}] of placed pieces
     const opts = pieces.map((p) => {
@@ -169,5 +171,5 @@
     return c;
   }
 
-  window.TTAP = { T, H, W_CANCEL, S, LINES, original, shortTurn, solve, presence, mod };
+  window.TTAP = { T, H, W_CANCEL, S, LINES, STOPS, RUN, original, shortTurn, solve, presence, mod };
 })();
