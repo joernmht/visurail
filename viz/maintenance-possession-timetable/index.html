@@ -27,6 +27,16 @@
   table.tt td,table.tt th{border-bottom:1px solid var(--line);padding:5px 6px;text-align:left;vertical-align:top}
   table.tt th{color:var(--muted);font-weight:500}
   .scroll{overflow-x:auto}
+  table.ed td{vertical-align:middle;white-space:nowrap}
+  table.ed select{font:inherit;font-size:14px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:4px 6px}
+  table.ed input[type=number]{width:4.2em;font:inherit;font-size:14px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:4px 6px}
+  table.ed input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;vertical-align:middle}
+  table.ed .t{color:var(--muted);font-size:12px;margin-left:4px}
+  table.ed .end{color:var(--muted)}
+  table.ed .rm{border:1px solid var(--line);background:none;color:var(--muted);border-radius:8px;cursor:pointer;font:inherit;padding:3px 9px}
+  table.ed .rm:hover{color:var(--red);border-color:var(--red)}
+  .drag{cursor:ew-resize;touch-action:none}
+  .warn{color:var(--orange)}
   @media (max-width:700px){ #ts .lbl,#occ .lbl{font-size:21px} }
 </style>
 </head>
@@ -60,7 +70,8 @@
   <section class="deeper">
     <h2><i data-icon="layers"></i> Go deeper: plan your own possession</h2>
     <p class="note">Close track sections and platforms, set the longest delay allowed, and the toy solver builds the alternative
-      timetable for one hour (it repeats every hour). Click a station name for its platform use below the diagram.</p>
+      timetable for one hour (it repeats every hour). Click a station name for its platform use below the diagram.
+      Further down you can edit the timetable itself.</p>
   <div class="panel">
     <div class="controls">
       <span class="ctl-title">Close track</span>
@@ -71,7 +82,7 @@
       <label>Longest delay <input type="range" id="dmax" min="0" max="15" value="8"> <output id="dmaxO"></output></label>
       <label><input type="checkbox" id="wrap" checked> Delays may cross into the next hour</label>
       <button class="btn ghost" type="button" id="preset">Essay scenario</button>
-      <button class="btn ghost" type="button" id="reset">No works</button>
+      <button class="btn ghost" type="button" id="reset">Remove all works</button>
     </div>
     <div class="viz" id="ts"></div>
     <div class="legend">
@@ -83,10 +94,18 @@
     </div>
     <div class="viz" id="occ" style="margin-top:10px"></div>
     <div class="readout" id="readout"></div>
-  </div>
 
-    <details><summary>The toy timetable</summary><div class="scroll"><table class="tt" id="tt"></table></div></details>
-    <p class="note"><b>Simplifications:</b> one made-up five-station double-track corridor with eight train lines per hour, not the
+    <h3 style="margin:22px 0 4px">Your timetable</h3>
+    <p class="note" style="margin-top:0">Change when each line leaves, which way it runs and where it stops, or add and remove lines.
+      You can also drag a train sideways in the diagram. Times are for the regular hour, before any works; the solver then adapts them.</p>
+    <div class="scroll"><table class="tt ed" id="tt"></table></div>
+    <div class="controls" style="margin-top:10px">
+      <button class="btn ghost" type="button" id="addIC">+ Intercity</button>
+      <button class="btn ghost" type="button" id="addR">+ Regional</button>
+      <button class="btn ghost" type="button" id="ttReset">Restore the essay timetable</button>
+    </div>
+  </div>
+    <p class="note"><b>Simplifications:</b> one made-up five-station double-track corridor with eight train lines per hour (until you edit them), not the
       Dutch network. Each train piece is shifted as a whole (the paper retimes every event), times are in whole minutes, platform tracks
       stand for all station tracks, and the search is a small exact branch-and-bound in your browser instead of a MILP solved with CPLEX.
       Short-turning, the delay-only rule, the hour-crossing rule and the objective weights (100&nbsp;000 per cancelled line, 1 per second
@@ -138,9 +157,10 @@
   const { svg, css } = window.VR;
   const M = window.TTAP, { S, T } = M;
   const $ = (id) => document.getElementById(id);
-  const fresh = () => ({ closed: new Set(), plat: S.map((s) => s.plat), dmax: 8, wrap: true, focus: 2 });
-  const essayCase = () => ({ closed: new Set([2]), plat: [4, 2, 1, 2, 4], dmax: 8, wrap: true, focus: 2 });
+  const essayLines = () => M.LINES.map((L, k) => ({ ...L, n: +L.id.split(" ")[1], stops: M.STOPS[L.type].slice() }));
+  const essayCase = () => ({ closed: new Set([2]), plat: [4, 2, 1, 2, 4], dmax: 8, wrap: true, focus: 2, lines: essayLines() });
   let state = essayCase();
+  const relabel = (L) => { L.id = `${L.type} ${L.n}`; };
 
   const secBox = $("secs");
   S.slice(0, -1).forEach((s, i) => {
@@ -157,24 +177,83 @@
     $("plats").appendChild(l);
   });
 
-  // timetable table
-  const fmt = (t) => t === null ? "" : ":" + String(Math.round(M.mod(t))).padStart(2, "0") + (t % 1 ? "½" : "");
-  $("tt").innerHTML = "<tr><th>Line</th>" + S.map((s) => `<th>${s.n}</th>`).join("") + "</tr>" +
-    M.original().map((L) => "<tr><td>" + L.id + (L.dir > 0 ? " →" : " ←") + "</td>" + S.map((_, st) => {
-      const e = L.ev.find((v) => v.st === st);
-      return "<td>" + (!e.stop ? "|" : [fmt(e.arr), fmt(e.dep)].filter(Boolean).join(" – ")) + "</td>";
-    }).join("") + "</tr>").join("");
-
   const tsBox = svg("svg", { viewBox: "0 0 1000 440", role: "img", "aria-label": "Time–space diagram of the alternative timetable" }, $("ts"));
   const occBox = svg("svg", { viewBox: "0 0 1000 170", role: "img", "aria-label": "Trains present at the selected station" }, $("occ"));
 
-  function draw() {
+  /* timetable editor: one row per line. Origin and terminus follow from the direction; the stations in
+     between are tick boxes (stops here). The computed times of the regular hour are shown next to them. */
+  const fmt = (t) => t === null ? "" : ":" + String(Math.floor(M.mod(t))).padStart(2, "0") + (t % 1 ? "½" : "");
+  const tt = $("tt");
+  function editor() {
+    const orig = M.original(state.lines);
+    tt.innerHTML = "<tr><th>Line</th><th>Runs</th><th>Leaves</th>" + S.slice(1, -1).map((s) => `<th>${s.n}</th>`).join("") + "<th>Arrives</th><th></th></tr>" +
+      state.lines.map((L, r) => {
+        const ev = orig[r].ev, last = ev[ev.length - 1];
+        return `<tr data-r="${r}"><td><select data-k="type" aria-label="Type of ${L.id}"><option value="IC"${L.type === "IC" ? " selected" : ""}>IC ${L.n}</option>` +
+          `<option value="R"${L.type === "R" ? " selected" : ""}>R ${L.n}</option></select></td>` +
+          `<td><select data-k="dir" aria-label="Direction of ${L.id}"><option value="1"${L.dir > 0 ? " selected" : ""}>Amsel → Elm</option>` +
+          `<option value="-1"${L.dir < 0 ? " selected" : ""}>Elm → Amsel</option></select></td>` +
+          `<td>:<input type="number" data-k="t0" min="0" max="59" step="1" value="${L.t0}" aria-label="${L.id} leaves at minute"></td>` +
+          S.slice(1, -1).map((_, j) => {
+            const st = j + 1, e = ev.find((v) => v.st === st), on = L.stops.includes(st);
+            return `<td><label><input type="checkbox" data-k="stop" data-st="${st}"${on ? " checked" : ""} aria-label="${L.id} stops at ${S[st].n}">` +
+              `<span class="t">${on ? fmt(e.arr) : fmt(e.arr) + " ↓"}</span></label></td>`;
+          }).join("") +
+          `<td class="end">${S[last.st].n} ${fmt(last.arr)}</td>` +
+          `<td>${state.lines.length > 1 ? `<button type="button" class="rm" data-k="rm" aria-label="Remove ${L.id}">✕</button>` : ""}</td></tr>`;
+      }).join("");
+  }
+  function edit(e) {
+    const tr = e.target.closest("tr[data-r]"); if (!tr) return;
+    const L = state.lines[+tr.dataset.r], k = e.target.dataset.k;
+    if (k === "type") { L.type = e.target.value; L.stops = M.STOPS[L.type].slice(); relabel(L); }
+    else if (k === "dir") L.dir = +e.target.value;
+    else if (k === "t0") { const v = Math.round(+e.target.value); if (!Number.isFinite(v)) return; L.t0 = M.mod(v); }
+    else if (k === "stop") { const st = +e.target.dataset.st; L.stops = e.target.checked ? [...L.stops, st] : L.stops.filter((x) => x !== st); }
+    else if (k === "rm") state.lines.splice(+tr.dataset.r, 1);
+    else return;
+    draw(k !== "t0" || e.type === "change");
+  }
+  tt.addEventListener("change", edit);
+  tt.addEventListener("input", (e) => { if (e.target.dataset.k === "t0") edit(e); });
+  tt.addEventListener("click", (e) => { if (e.target.dataset.k === "rm") edit(e); });
+  function addLine(type) {
+    const n = Math.max(0, ...state.lines.map((L) => L.n)) + 1;
+    const L = { type, dir: n % 2 ? 1 : -1, t0: 15, n, stops: M.STOPS[type].slice() };
+    relabel(L); state.lines.push(L); draw();
+  }
+  $("addIC").addEventListener("click", () => addLine("IC"));
+  $("addR").addEventListener("click", () => addLine("R"));
+  $("ttReset").addEventListener("click", () => { state.lines = essayLines(); draw(); });
+
+  // drag a train sideways in the diagram to shift its line's departure
+  let drag = null;
+  const toMin = (ev) => { const p = tsBox.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY; return p.matrixTransform(tsBox.getScreenCTM().inverse()).x / ((980 - 150) / T); };
+  tsBox.addEventListener("pointerdown", (ev) => {
+    const h = ev.target.closest("[data-line]"); if (!h) return;
+    const L = state.lines.find((x) => x.id === h.dataset.line); if (!L) return;
+    drag = { L, m0: toMin(ev), t0: L.t0 }; tsBox.setPointerCapture(ev.pointerId); ev.preventDefault();
+  });
+  tsBox.addEventListener("pointermove", (ev) => {
+    if (!drag) return;
+    const t = M.mod(drag.t0 + Math.round(toMin(ev) - drag.m0));
+    if (t !== drag.L.t0) { drag.L.t0 = t; draw(false); }
+  });
+  const endDrag = () => { if (drag) { drag = null; draw(); } };
+  tsBox.addEventListener("pointerup", endDrag);
+  tsBox.addEventListener("pointercancel", endDrag);
+
+
+  function draw(rebuildEditor = true) {
+    if (rebuildEditor) editor();
     $("dmaxO").textContent = state.dmax + " min";
     $("dmax").value = state.dmax; $("wrap").checked = state.wrap;
     secBox.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", state.closed.has(+b.dataset.sec)));
     $("plats").querySelectorAll("select").forEach((s) => { s.value = state.plat[+s.dataset.st]; });
     const R = M.solve(state);
-    const orig = M.original();
+    const orig = M.original(state.lines);
+    // does the timetable itself run without works? (headways, platform tracks)
+    const base = M.solve({ lines: state.lines, dmax: state.dmax, wrap: state.wrap });
 
     tsBox.innerHTML = "";
     const G = window.TSD(tsBox, { X0: 150, X1: 980, Y0: 20, Y1: 390 });
@@ -204,6 +283,8 @@
       if (p.cancelled) return svg("path", { d: G.pathD(p), fill: "none", stroke: css("--red"), "stroke-width": 2, "stroke-dasharray": "2 5" }, live);
       const col = p.d ? css("--orange") : p.type === "IC" ? css("--accent") : css("--ink");
       svg("path", { d: G.pathD(p, p.d), fill: "none", stroke: col, "stroke-width": p.type === "IC" ? 2.6 : 2, "stroke-linejoin": "round" }, live);
+      // wide invisible handle for dragging
+      svg("path", { d: G.pathD(p, p.d), fill: "none", stroke: "transparent", "stroke-width": 16, class: "drag", "data-line": p.line.id, "pointer-events": "stroke" }, live).appendChild(document.createElementNS("http://www.w3.org/2000/svg", "title")).textContent = `${p.line.id}: drag to shift its departure`;
       p.ev.filter((e) => e.turned).forEach((e) => {
         const t = M.mod((e.arr ?? e.dep) + p.d);
         svg("circle", { cx: G.x(t), cy: G.y(S[e.st].km), r: 4, fill: col }, live);
@@ -228,8 +309,11 @@
     for (let m = 0; m <= T; m += 10) svg("text", { x: ox(2 * m), y: O.Y1 + 18, class: "lbl", "text-anchor": "middle" }, occBox).textContent = ":" + String(m % 60).padStart(2, "0");
 
     const pre = R.cut.length, canc = R.cancelled;
-    $("readout").innerHTML = (R.cost === Infinity ? "No alternative timetable found. " : "") +
-      `<b>${R.shortTurned}</b> of 8 lines short-turned, <b>${pre}</b> line part${pre === 1 ? "" : "s"} lost in preprocessing (no place to turn), ` +
+    const baseNote = base.cost === 0 ? "" : base.cost === Infinity ? '<span class="warn">Your timetable cannot run even without works. </span>'
+      : `<span class="warn">Your timetable already clashes without any works (2-minute headway, platform tracks): it needs ${base.delayMin} min of delay` +
+        `${base.cancelled ? ` and ${base.cancelled} cancellation${base.cancelled > 1 ? "s" : ""}` : ""} on its own. The figures below include that.</span> `;
+    $("readout").innerHTML = baseNote + (R.cost === Infinity ? "No alternative timetable found. " : "") +
+      `<b>${R.shortTurned}</b> of ${state.lines.length} lines short-turned, <b>${pre}</b> line part${pre === 1 ? "" : "s"} lost in preprocessing (no place to turn), ` +
       `<b>${canc}</b> cancelled by the solver. Arrival delay in total: <b>${R.delayMin} min</b> per hour. ` +
       `Objective: <b>${R.cost === Infinity ? "–" : R.cost.toLocaleString("en")}</b> (100 000 per cancellation + 1 per second of delay). ` +
       `Search: ${R.nodes.toLocaleString("en")} nodes, ${R.ms < 1 ? "<1" : Math.round(R.ms)} ms${R.stopped ? " (stopped early: best found so far)" : ""}.`;
@@ -238,7 +322,7 @@
   $("dmax").addEventListener("input", (e) => { state.dmax = +e.target.value; draw(); });
   $("wrap").addEventListener("change", (e) => { state.wrap = e.target.checked; draw(); });
   $("preset").addEventListener("click", () => { state = essayCase(); draw(); });
-  $("reset").addEventListener("click", () => { state = fresh(); draw(); });
+  $("reset").addEventListener("click", () => { state.closed = new Set(); state.plat = S.map((s) => s.plat); draw(); });
   document.addEventListener("visurail:theme", draw);
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
   draw();
