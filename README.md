@@ -66,7 +66,9 @@ viz/<slug>/index.html     one essay: stage steps, field guide, "go deeper" explo
 viz/<slug>/model.js       the toy model shared by essay and explorer
 ```
 
-Static site, no build step. Serve locally with `python3 -m http.server` and open
+Static site, no build step. **Deployment:** every push to `main` publishes the site to GitHub
+Pages (`.github/workflows/pages.yml`). The custom domain is set under Settings → Pages (with
+Actions deployments a `CNAME` file in the repo is not used). Serve locally with `python3 -m http.server` and open
 http://localhost:8000. Works on GitHub Pages as-is (`.nojekyll` included).
 
 Design: corporate design of the Chair of Railway Operations, TU Dresden
